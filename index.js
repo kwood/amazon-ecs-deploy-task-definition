@@ -32,7 +32,7 @@ async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForSe
 
   const consoleHostname = aws.config.region.startsWith('cn') ? 'console.amazonaws.cn' : 'console.aws.amazon.com';
 
-  core.info(`Deployment startedz. Watch this deployment's progress in the Amazon ECS console: https://${consoleHostname}/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/services/${service}/events`);
+  core.info(`Deployment started. Watch this deployment's progress in the Amazon ECS console: https://${consoleHostname}/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/services/${service}/events`);
 
   // Wait for service stability
   if (waitForService && waitForService.toLowerCase() === 'true') {
@@ -339,7 +339,10 @@ async function run() {
           const failure = runTaskResponse.failures[0];
           throw new Error(`${failure.arn} is ${failure.reason}`);
         }
-        // Get logout put from the task
+        await ecs.waitFor('tasksStopped', {
+          tasks: runTaskResponse.tasks.map(task => task.taskArn),
+        }).promise();
+        // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
         if (container.exitCode !== 0) {
