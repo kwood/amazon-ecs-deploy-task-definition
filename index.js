@@ -325,6 +325,8 @@ async function run() {
       logEvents.events.forEach(event => {
         core.info(event.message);
       });
+    } else {
+      core.info(`No pre-deploy command specified`);
     }
 
 
