@@ -287,54 +287,8 @@ async function run() {
       throw(error);
     }
     const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
+    core.info(`Task definition registered: ${registerResponse}`);
     core.setOutput('task-definition-arn', taskDefArn);
-
-    // Run pre-deploy task
-    if (preDeployCommand) {
-      core.info(`Running pre-deploy command: ${preDeployCommand}`);
-      const runTaskResponse = await ecs.runTask({
-        taskDefinition: taskDefArn,
-        cluster: cluster,
-        overrides: {
-          containerOverrides: [
-            {
-              name: registerResponse.taskDefinition.containerDefinitions[0].name,
-              command: preDeployCommand.split(' ')
-            }
-          ]
-        },
-        networkConfiguration: {
-          awsvpcConfiguration: {
-            subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].subnets : [],
-            assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].associatePublicIpAddress : 'DISABLED',
-            securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].securityGroups : []
-          }
-        }
-      }).promise();
-      if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
-        const failure = runTaskResponse.failures[0];
-        throw new Error(`${failure.arn} is ${failure.reason}`);
-      }
-      // Get logout put from the task
-      const task = runTaskResponse.tasks[0];
-      const container = task.containers[0];
-      if (container.exitCode !== 0) {
-        throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
-      }
-      // Output logs from container
-      const logStreamName = container.logStreamName;
-      const logGroupName = task.group;
-      const logEvents = await ecs.getLogEvents({
-        startTime: task.createdAt.getTime(),
-        logGroupName: logGroupName,
-        logStreamName: logStreamName,
-      }).promise();
-      logEvents.events.forEach(event => {
-        core.info(event.message);
-      });
-    } else {
-      core.info(`No pre-deploy command specified`);
-    }
 
 
     // Update the service with the new task definition
@@ -355,6 +309,53 @@ async function run() {
       const serviceResponse = describeResponse.services[0];
       if (serviceResponse.status != 'ACTIVE') {
         throw new Error(`Service is ${serviceResponse.status}`);
+      }
+
+
+      if (preDeployCommand) {
+        core.info(`Running pre-deploy command: ${preDeployCommand}`);
+        const runTaskResponse = await ecs.runTask({
+          taskDefinition: taskDefArn,
+          cluster: cluster,
+          overrides: {
+            containerOverrides: [
+              {
+                name: registerResponse.taskDefinition.containerDefinitions[0].name,
+                command: preDeployCommand.split(' ')
+              }
+            ]
+          },
+          networkConfiguration: {
+            awsvpcConfiguration: {
+              subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
+              securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.securityGroups : [],
+              assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp : 'DISABLED'
+            }
+          }
+        }).promise();
+        if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
+          const failure = runTaskResponse.failures[0];
+          throw new Error(`${failure.arn} is ${failure.reason}`);
+        }
+        // Get logout put from the task
+        const task = runTaskResponse.tasks[0];
+        const container = task.containers[0];
+        if (container.exitCode !== 0) {
+          throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
+        }
+        // Output logs from container
+        const logStreamName = container.logStreamName;
+        const logGroupName = task.group;
+        const logEvents = await ecs.getLogEvents({
+          startTime: task.createdAt.getTime(),
+          logGroupName: logGroupName,
+          logStreamName: logStreamName,
+        }).promise();
+        logEvents.events.forEach(event => {
+          core.info(event.message);
+        });
+      } else {
+        core.info(`No pre-deploy command specified`);
       }
 
       if (!serviceResponse.deploymentController || !serviceResponse.deploymentController.type || serviceResponse.deploymentController.type === 'ECS') {
