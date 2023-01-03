@@ -332,7 +332,7 @@ async function run() {
             containerOverrides: [
               {
                 name: registerResponse.taskDefinition.containerDefinitions[0].name,
-                command: ["CMD-SHELL", preDeployCommand]
+                command: ["/bin/bash", "-c", preDeployCommand]
               }
             ]
           },
