@@ -298,7 +298,7 @@ async function run() {
         overrides: {
           containerOverrides: [
             {
-              name: 'pre-deploy',
+              name: registerResponse.taskDefinition.containerDefinitions[0].name,
               command: preDeployCommand.split(' ')
             }
           ]
@@ -310,7 +310,7 @@ async function run() {
       }
       // Get logout put from the task
       const task = runTaskResponse.tasks[0];
-      const container = task.containers.find(c => c.name === 'pre-deploy');
+      const container = task.containers[0];
       if (container.exitCode !== 0) {
         throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
       }
