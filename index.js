@@ -319,6 +319,7 @@ async function run() {
           awsvpcConfiguration: {
             subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
             securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.securityGroups : [],
+            assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp : 'DISABLED'
           }
         };
         core.info("Network config: " + JSON.stringify(networkConfig, undefined, 4));
@@ -335,19 +336,14 @@ async function run() {
               }
             ]
           },
-          networkConfiguration: {
-            awsvpcConfiguration: {
-              subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
-              securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.securityGroups : [],
-            }
-          },
-          
+          networkConfiguration: networkConfig,
         }).promise();
         core.info("Pre-deploy command run: " + JSON.stringify(runTaskResponse, undefined, 4));
         if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
           const failure = runTaskResponse.failures[0];
-          throw new Error(`${failure.arn} is ${failure.reason}`);
+          throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
+        await new Promise(r => setTimeout(r, 3000));
         await ecs.waitFor('tasksStopped', {
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster,
@@ -355,8 +351,7 @@ async function run() {
             delay: 6,
             maxAttempts: 50
           }
-
-        }).promise();
+        }.promise());
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
