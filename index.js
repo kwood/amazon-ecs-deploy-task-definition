@@ -271,7 +271,7 @@ async function run() {
     const forceNewDeployment = forceNewDeployInput.toLowerCase() === 'true';
 
     // Register the task definition
-    core.debug('Registering the task definition');
+    core.info('Registering the task definition');
     const taskDefPath = path.isAbsolute(taskDefinitionFile) ?
       taskDefinitionFile :
       path.join(process.env.GITHUB_WORKSPACE, taskDefinitionFile);
@@ -290,21 +290,41 @@ async function run() {
     core.setOutput('task-definition-arn', taskDefArn);
 
     // Run pre-deploy task
-    const runTaskResponse = await ecs.runTask({
-      taskDefinition: taskDefArn,
-      cluster: cluster,
-      overrides: {
-        containerOverrides: [
-          {
-            name: 'pre-deploy',
-            command: preDeployCommand.split(' ')
-          }
-        ]
+    if (preDeployCommand) {
+      core.info(`Running pre-deploy command: ${preDeployCommand}`);
+      const runTaskResponse = await ecs.runTask({
+        taskDefinition: taskDefArn,
+        cluster: cluster,
+        overrides: {
+          containerOverrides: [
+            {
+              name: 'pre-deploy',
+              command: preDeployCommand.split(' ')
+            }
+          ]
+        }
+      }).promise();
+      if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
+        const failure = runTaskResponse.failures[0];
+        throw new Error(`${failure.arn} is ${failure.reason}`);
       }
-    });
-    if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
-      const failure = runTaskResponse.failures[0];
-      throw new Error(`${failure.arn} is ${failure.reason}`);
+      // Get logout put from the task
+      const task = runTaskResponse.tasks[0];
+      const container = task.containers.find(c => c.name === 'pre-deploy');
+      if (container.exitCode !== 0) {
+        throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
+      }
+      // Output logs from container
+      const logStreamName = container.logStreamName;
+      const logGroupName = task.group;
+      const logEvents = await ecs.getLogEvents({
+        startTime: task.createdAt.getTime(),
+        logGroupName: logGroupName,
+        logStreamName: logStreamName,
+      }).promise();
+      logEvents.events.forEach(event => {
+        core.info(event.message);
+      }
     }
 
 
