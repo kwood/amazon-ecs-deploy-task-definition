@@ -324,7 +324,7 @@ async function run() {
       }).promise();
       logEvents.events.forEach(event => {
         core.info(event.message);
-      }
+      });
     }
 
 
