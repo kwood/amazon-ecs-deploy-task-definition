@@ -332,6 +332,7 @@ async function run() {
             }
           }
         }).promise();
+        core.info("Pre-deploy command run: " + JSON.stringify(runTaskResponse, undefined, 4));
         if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
           const failure = runTaskResponse.failures[0];
           throw new Error(`${failure.arn} is ${failure.reason}`);
