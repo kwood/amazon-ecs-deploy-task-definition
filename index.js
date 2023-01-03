@@ -261,6 +261,7 @@ async function run() {
     const service = core.getInput('service', { required: false });
     const cluster = core.getInput('cluster', { required: false });
     const waitForService = core.getInput('wait-for-service-stability', { required: false });
+    const preDeployCommand = core.getInput('pre-deploy-command', { required: false });
     let waitForMinutes = parseInt(core.getInput('wait-for-minutes', { required: false })) || 30;
     if (waitForMinutes > MAX_WAIT_MINUTES) {
       waitForMinutes = MAX_WAIT_MINUTES;
@@ -287,6 +288,25 @@ async function run() {
     }
     const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
     core.setOutput('task-definition-arn', taskDefArn);
+
+    // Run pre-deploy task
+    const runTaskResponse = await ecs.runTask({
+      taskDefinition: taskDefArn,
+      cluster: cluster,
+      overrides: {
+        containerOverrides: [
+          {
+            name: 'pre-deploy',
+            command: preDeployCommand.split(' ')
+          }
+        ]
+      }
+    });
+    if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
+      const failure = runTaskResponse.failures[0];
+      throw new Error(`${failure.arn} is ${failure.reason}`);
+    }
+
 
     // Update the service with the new task definition
     if (service) {
