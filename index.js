@@ -318,6 +318,7 @@ async function run() {
         const runTaskResponse = await ecs.runTask({
           taskDefinition: taskDefArn,
           cluster: cluster,
+          launchType: serviceResponse.launchType,
           overrides: {
             containerOverrides: [
               {
