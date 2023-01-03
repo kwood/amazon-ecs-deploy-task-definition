@@ -319,6 +319,7 @@ async function run() {
           taskDefinition: taskDefArn,
           cluster: cluster,
           launchType: serviceResponse.launchType,
+          taskRoleArn: registerResponse.taskDefinition.taskRoleArn,
           overrides: {
             containerOverrides: [
               {
