@@ -7,9 +7,9 @@ const {
   RunTaskCommand, 
   waitUntilTasksStopped, 
   waitUntilServicesStable, 
-  UpdateServiceCommand,
-  
+  UpdateServiceCommand
 } = require("@aws-sdk/client-ecs");
+const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
 const { CodeDeployClient, AddTagsToOnPremisesInstancesCommand } = require("@aws-sdk/client-codedeploy");
 const yaml = require('yaml');
 const fs = require('fs');
@@ -265,6 +265,9 @@ async function run() {
     const codedeploy = new CodeDeployClient({
       customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
     });
+    const cloudwatch = new CloudWatchLogsClient({
+      customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
+    });
 
     // Get inputs
     const taskDefinitionFile = core.getInput('task-definition', { required: true });
@@ -359,17 +362,18 @@ async function run() {
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
-        if (container.exitCode !== 0) {
+        if (container.exitCode && container.exitCode !== 0) {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
         }
-        // Output logs from container
-        // const logStreamName = container.logStreamName;
-        // const logGroupName = task.group;
-        // // get log messages
-        // const logEvents = await getLogEvents({
-        //   logGroupName: logGroupName,
-        //   logStreamName: logStreamName
-        // });
+        // get log messages
+        const logEvents = await cloudwatch.send(GetLogEventsCommand({
+          logGroupName: container.logStreamName,
+          logStreamName: task.group
+        }));
+        core.info(`Pre-deploy task output: `);
+        logEvents.events.forEach(event => {
+          core.info(event.message);
+        });
       } else {
         core.info(`No pre-deploy command specified`);
       }

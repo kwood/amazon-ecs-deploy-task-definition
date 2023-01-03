@@ -13,9 +13,9 @@ const {
   RunTaskCommand, 
   waitUntilTasksStopped, 
   waitUntilServicesStable, 
-  UpdateServiceCommand,
-  
+  UpdateServiceCommand
 } = __nccwpck_require__(18209);
+const { CloudWatchLogsClient, GetLogEventsCommand } = __nccwpck_require__(31573);
 const { CodeDeployClient, AddTagsToOnPremisesInstancesCommand } = __nccwpck_require__(26692);
 const yaml = __nccwpck_require__(44083);
 const fs = __nccwpck_require__(57147);
@@ -271,6 +271,9 @@ async function run() {
     const codedeploy = new CodeDeployClient({
       customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
     });
+    const cloudwatch = new CloudWatchLogsClient({
+      customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
+    });
 
     // Get inputs
     const taskDefinitionFile = core.getInput('task-definition', { required: true });
@@ -365,17 +368,18 @@ async function run() {
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
-        if (container.exitCode !== 0) {
+        if (container.exitCode && container.exitCode !== 0) {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
         }
-        // Output logs from container
-        // const logStreamName = container.logStreamName;
-        // const logGroupName = task.group;
-        // // get log messages
-        // const logEvents = await getLogEvents({
-        //   logGroupName: logGroupName,
-        //   logStreamName: logStreamName
-        // });
+        // get log messages
+        const logEvents = await cloudwatch.send(GetLogEventsCommand({
+          logGroupName: container.logStreamName,
+          logStreamName: task.group
+        }));
+        core.info(`Pre-deploy task output: `);
+        logEvents.events.forEach(event => {
+          core.info(event.message);
+        });
       } else {
         core.info(`No pre-deploy command specified`);
       }
@@ -2813,6 +2817,8302 @@ function checkBypass(reqUrl) {
 }
 exports.checkBypass = checkBypass;
 //# sourceMappingURL=proxy.js.map
+
+/***/ }),
+
+/***/ 718:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloudWatchLogs = void 0;
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const AssociateKmsKeyCommand_1 = __nccwpck_require__(98966);
+const CancelExportTaskCommand_1 = __nccwpck_require__(94135);
+const CreateExportTaskCommand_1 = __nccwpck_require__(64780);
+const CreateLogGroupCommand_1 = __nccwpck_require__(36692);
+const CreateLogStreamCommand_1 = __nccwpck_require__(39112);
+const DeleteDataProtectionPolicyCommand_1 = __nccwpck_require__(78304);
+const DeleteDestinationCommand_1 = __nccwpck_require__(1746);
+const DeleteLogGroupCommand_1 = __nccwpck_require__(94076);
+const DeleteLogStreamCommand_1 = __nccwpck_require__(56715);
+const DeleteMetricFilterCommand_1 = __nccwpck_require__(13593);
+const DeleteQueryDefinitionCommand_1 = __nccwpck_require__(82469);
+const DeleteResourcePolicyCommand_1 = __nccwpck_require__(48669);
+const DeleteRetentionPolicyCommand_1 = __nccwpck_require__(2106);
+const DeleteSubscriptionFilterCommand_1 = __nccwpck_require__(57275);
+const DescribeDestinationsCommand_1 = __nccwpck_require__(94646);
+const DescribeExportTasksCommand_1 = __nccwpck_require__(37619);
+const DescribeLogGroupsCommand_1 = __nccwpck_require__(68706);
+const DescribeLogStreamsCommand_1 = __nccwpck_require__(15229);
+const DescribeMetricFiltersCommand_1 = __nccwpck_require__(51059);
+const DescribeQueriesCommand_1 = __nccwpck_require__(87403);
+const DescribeQueryDefinitionsCommand_1 = __nccwpck_require__(44041);
+const DescribeResourcePoliciesCommand_1 = __nccwpck_require__(68090);
+const DescribeSubscriptionFiltersCommand_1 = __nccwpck_require__(69977);
+const DisassociateKmsKeyCommand_1 = __nccwpck_require__(81790);
+const FilterLogEventsCommand_1 = __nccwpck_require__(89045);
+const GetDataProtectionPolicyCommand_1 = __nccwpck_require__(47496);
+const GetLogEventsCommand_1 = __nccwpck_require__(43771);
+const GetLogGroupFieldsCommand_1 = __nccwpck_require__(88807);
+const GetLogRecordCommand_1 = __nccwpck_require__(35628);
+const GetQueryResultsCommand_1 = __nccwpck_require__(15678);
+const ListTagsForResourceCommand_1 = __nccwpck_require__(50556);
+const ListTagsLogGroupCommand_1 = __nccwpck_require__(84068);
+const PutDataProtectionPolicyCommand_1 = __nccwpck_require__(11051);
+const PutDestinationCommand_1 = __nccwpck_require__(12193);
+const PutDestinationPolicyCommand_1 = __nccwpck_require__(95531);
+const PutLogEventsCommand_1 = __nccwpck_require__(31261);
+const PutMetricFilterCommand_1 = __nccwpck_require__(57664);
+const PutQueryDefinitionCommand_1 = __nccwpck_require__(33440);
+const PutResourcePolicyCommand_1 = __nccwpck_require__(88152);
+const PutRetentionPolicyCommand_1 = __nccwpck_require__(69827);
+const PutSubscriptionFilterCommand_1 = __nccwpck_require__(10727);
+const StartQueryCommand_1 = __nccwpck_require__(39727);
+const StopQueryCommand_1 = __nccwpck_require__(4170);
+const TagLogGroupCommand_1 = __nccwpck_require__(29106);
+const TagResourceCommand_1 = __nccwpck_require__(16357);
+const TestMetricFilterCommand_1 = __nccwpck_require__(46271);
+const UntagLogGroupCommand_1 = __nccwpck_require__(11043);
+const UntagResourceCommand_1 = __nccwpck_require__(58237);
+class CloudWatchLogs extends CloudWatchLogsClient_1.CloudWatchLogsClient {
+    associateKmsKey(args, optionsOrCb, cb) {
+        const command = new AssociateKmsKeyCommand_1.AssociateKmsKeyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    cancelExportTask(args, optionsOrCb, cb) {
+        const command = new CancelExportTaskCommand_1.CancelExportTaskCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    createExportTask(args, optionsOrCb, cb) {
+        const command = new CreateExportTaskCommand_1.CreateExportTaskCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    createLogGroup(args, optionsOrCb, cb) {
+        const command = new CreateLogGroupCommand_1.CreateLogGroupCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    createLogStream(args, optionsOrCb, cb) {
+        const command = new CreateLogStreamCommand_1.CreateLogStreamCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteDataProtectionPolicy(args, optionsOrCb, cb) {
+        const command = new DeleteDataProtectionPolicyCommand_1.DeleteDataProtectionPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteDestination(args, optionsOrCb, cb) {
+        const command = new DeleteDestinationCommand_1.DeleteDestinationCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteLogGroup(args, optionsOrCb, cb) {
+        const command = new DeleteLogGroupCommand_1.DeleteLogGroupCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteLogStream(args, optionsOrCb, cb) {
+        const command = new DeleteLogStreamCommand_1.DeleteLogStreamCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteMetricFilter(args, optionsOrCb, cb) {
+        const command = new DeleteMetricFilterCommand_1.DeleteMetricFilterCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteQueryDefinition(args, optionsOrCb, cb) {
+        const command = new DeleteQueryDefinitionCommand_1.DeleteQueryDefinitionCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteResourcePolicy(args, optionsOrCb, cb) {
+        const command = new DeleteResourcePolicyCommand_1.DeleteResourcePolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteRetentionPolicy(args, optionsOrCb, cb) {
+        const command = new DeleteRetentionPolicyCommand_1.DeleteRetentionPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    deleteSubscriptionFilter(args, optionsOrCb, cb) {
+        const command = new DeleteSubscriptionFilterCommand_1.DeleteSubscriptionFilterCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeDestinations(args, optionsOrCb, cb) {
+        const command = new DescribeDestinationsCommand_1.DescribeDestinationsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeExportTasks(args, optionsOrCb, cb) {
+        const command = new DescribeExportTasksCommand_1.DescribeExportTasksCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeLogGroups(args, optionsOrCb, cb) {
+        const command = new DescribeLogGroupsCommand_1.DescribeLogGroupsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeLogStreams(args, optionsOrCb, cb) {
+        const command = new DescribeLogStreamsCommand_1.DescribeLogStreamsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeMetricFilters(args, optionsOrCb, cb) {
+        const command = new DescribeMetricFiltersCommand_1.DescribeMetricFiltersCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeQueries(args, optionsOrCb, cb) {
+        const command = new DescribeQueriesCommand_1.DescribeQueriesCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeQueryDefinitions(args, optionsOrCb, cb) {
+        const command = new DescribeQueryDefinitionsCommand_1.DescribeQueryDefinitionsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeResourcePolicies(args, optionsOrCb, cb) {
+        const command = new DescribeResourcePoliciesCommand_1.DescribeResourcePoliciesCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    describeSubscriptionFilters(args, optionsOrCb, cb) {
+        const command = new DescribeSubscriptionFiltersCommand_1.DescribeSubscriptionFiltersCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    disassociateKmsKey(args, optionsOrCb, cb) {
+        const command = new DisassociateKmsKeyCommand_1.DisassociateKmsKeyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    filterLogEvents(args, optionsOrCb, cb) {
+        const command = new FilterLogEventsCommand_1.FilterLogEventsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    getDataProtectionPolicy(args, optionsOrCb, cb) {
+        const command = new GetDataProtectionPolicyCommand_1.GetDataProtectionPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    getLogEvents(args, optionsOrCb, cb) {
+        const command = new GetLogEventsCommand_1.GetLogEventsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    getLogGroupFields(args, optionsOrCb, cb) {
+        const command = new GetLogGroupFieldsCommand_1.GetLogGroupFieldsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    getLogRecord(args, optionsOrCb, cb) {
+        const command = new GetLogRecordCommand_1.GetLogRecordCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    getQueryResults(args, optionsOrCb, cb) {
+        const command = new GetQueryResultsCommand_1.GetQueryResultsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    listTagsForResource(args, optionsOrCb, cb) {
+        const command = new ListTagsForResourceCommand_1.ListTagsForResourceCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    listTagsLogGroup(args, optionsOrCb, cb) {
+        const command = new ListTagsLogGroupCommand_1.ListTagsLogGroupCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putDataProtectionPolicy(args, optionsOrCb, cb) {
+        const command = new PutDataProtectionPolicyCommand_1.PutDataProtectionPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putDestination(args, optionsOrCb, cb) {
+        const command = new PutDestinationCommand_1.PutDestinationCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putDestinationPolicy(args, optionsOrCb, cb) {
+        const command = new PutDestinationPolicyCommand_1.PutDestinationPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putLogEvents(args, optionsOrCb, cb) {
+        const command = new PutLogEventsCommand_1.PutLogEventsCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putMetricFilter(args, optionsOrCb, cb) {
+        const command = new PutMetricFilterCommand_1.PutMetricFilterCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putQueryDefinition(args, optionsOrCb, cb) {
+        const command = new PutQueryDefinitionCommand_1.PutQueryDefinitionCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putResourcePolicy(args, optionsOrCb, cb) {
+        const command = new PutResourcePolicyCommand_1.PutResourcePolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putRetentionPolicy(args, optionsOrCb, cb) {
+        const command = new PutRetentionPolicyCommand_1.PutRetentionPolicyCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    putSubscriptionFilter(args, optionsOrCb, cb) {
+        const command = new PutSubscriptionFilterCommand_1.PutSubscriptionFilterCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    startQuery(args, optionsOrCb, cb) {
+        const command = new StartQueryCommand_1.StartQueryCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    stopQuery(args, optionsOrCb, cb) {
+        const command = new StopQueryCommand_1.StopQueryCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    tagLogGroup(args, optionsOrCb, cb) {
+        const command = new TagLogGroupCommand_1.TagLogGroupCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    tagResource(args, optionsOrCb, cb) {
+        const command = new TagResourceCommand_1.TagResourceCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    testMetricFilter(args, optionsOrCb, cb) {
+        const command = new TestMetricFilterCommand_1.TestMetricFilterCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    untagLogGroup(args, optionsOrCb, cb) {
+        const command = new UntagLogGroupCommand_1.UntagLogGroupCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+    untagResource(args, optionsOrCb, cb) {
+        const command = new UntagResourceCommand_1.UntagResourceCommand(args);
+        if (typeof optionsOrCb === "function") {
+            this.send(command, optionsOrCb);
+        }
+        else if (typeof cb === "function") {
+            if (typeof optionsOrCb !== "object")
+                throw new Error(`Expect http options but get ${typeof optionsOrCb}`);
+            this.send(command, optionsOrCb || {}, cb);
+        }
+        else {
+            return this.send(command, optionsOrCb);
+        }
+    }
+}
+exports.CloudWatchLogs = CloudWatchLogs;
+
+
+/***/ }),
+
+/***/ 17844:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloudWatchLogsClient = void 0;
+const config_resolver_1 = __nccwpck_require__(56153);
+const middleware_content_length_1 = __nccwpck_require__(42245);
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_host_header_1 = __nccwpck_require__(22545);
+const middleware_logger_1 = __nccwpck_require__(20014);
+const middleware_recursion_detection_1 = __nccwpck_require__(85525);
+const middleware_retry_1 = __nccwpck_require__(96064);
+const middleware_signing_1 = __nccwpck_require__(14935);
+const middleware_user_agent_1 = __nccwpck_require__(64688);
+const smithy_client_1 = __nccwpck_require__(4963);
+const EndpointParameters_1 = __nccwpck_require__(76111);
+const runtimeConfig_1 = __nccwpck_require__(29879);
+class CloudWatchLogsClient extends smithy_client_1.Client {
+    constructor(configuration) {
+        const _config_0 = (0, runtimeConfig_1.getRuntimeConfig)(configuration);
+        const _config_1 = (0, EndpointParameters_1.resolveClientEndpointParameters)(_config_0);
+        const _config_2 = (0, config_resolver_1.resolveRegionConfig)(_config_1);
+        const _config_3 = (0, middleware_endpoint_1.resolveEndpointConfig)(_config_2);
+        const _config_4 = (0, middleware_retry_1.resolveRetryConfig)(_config_3);
+        const _config_5 = (0, middleware_host_header_1.resolveHostHeaderConfig)(_config_4);
+        const _config_6 = (0, middleware_signing_1.resolveAwsAuthConfig)(_config_5);
+        const _config_7 = (0, middleware_user_agent_1.resolveUserAgentConfig)(_config_6);
+        super(_config_7);
+        this.config = _config_7;
+        this.middlewareStack.use((0, middleware_retry_1.getRetryPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_content_length_1.getContentLengthPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_host_header_1.getHostHeaderPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_logger_1.getLoggerPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_recursion_detection_1.getRecursionDetectionPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_signing_1.getAwsAuthPlugin)(this.config));
+        this.middlewareStack.use((0, middleware_user_agent_1.getUserAgentPlugin)(this.config));
+    }
+    destroy() {
+        super.destroy();
+    }
+}
+exports.CloudWatchLogsClient = CloudWatchLogsClient;
+
+
+/***/ }),
+
+/***/ 98966:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AssociateKmsKeyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class AssociateKmsKeyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, AssociateKmsKeyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "AssociateKmsKeyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.AssociateKmsKeyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1AssociateKmsKeyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1AssociateKmsKeyCommand)(output, context);
+    }
+}
+exports.AssociateKmsKeyCommand = AssociateKmsKeyCommand;
+
+
+/***/ }),
+
+/***/ 94135:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CancelExportTaskCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class CancelExportTaskCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, CancelExportTaskCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "CancelExportTaskCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.CancelExportTaskRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1CancelExportTaskCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1CancelExportTaskCommand)(output, context);
+    }
+}
+exports.CancelExportTaskCommand = CancelExportTaskCommand;
+
+
+/***/ }),
+
+/***/ 64780:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateExportTaskCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class CreateExportTaskCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, CreateExportTaskCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "CreateExportTaskCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.CreateExportTaskRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.CreateExportTaskResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1CreateExportTaskCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1CreateExportTaskCommand)(output, context);
+    }
+}
+exports.CreateExportTaskCommand = CreateExportTaskCommand;
+
+
+/***/ }),
+
+/***/ 36692:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateLogGroupCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class CreateLogGroupCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, CreateLogGroupCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "CreateLogGroupCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.CreateLogGroupRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1CreateLogGroupCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1CreateLogGroupCommand)(output, context);
+    }
+}
+exports.CreateLogGroupCommand = CreateLogGroupCommand;
+
+
+/***/ }),
+
+/***/ 39112:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateLogStreamCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class CreateLogStreamCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, CreateLogStreamCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "CreateLogStreamCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.CreateLogStreamRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1CreateLogStreamCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1CreateLogStreamCommand)(output, context);
+    }
+}
+exports.CreateLogStreamCommand = CreateLogStreamCommand;
+
+
+/***/ }),
+
+/***/ 78304:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteDataProtectionPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteDataProtectionPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteDataProtectionPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteDataProtectionPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteDataProtectionPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteDataProtectionPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteDataProtectionPolicyCommand)(output, context);
+    }
+}
+exports.DeleteDataProtectionPolicyCommand = DeleteDataProtectionPolicyCommand;
+
+
+/***/ }),
+
+/***/ 1746:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteDestinationCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteDestinationCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteDestinationCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteDestinationCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteDestinationRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteDestinationCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteDestinationCommand)(output, context);
+    }
+}
+exports.DeleteDestinationCommand = DeleteDestinationCommand;
+
+
+/***/ }),
+
+/***/ 94076:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteLogGroupCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteLogGroupCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteLogGroupCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteLogGroupCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteLogGroupRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteLogGroupCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteLogGroupCommand)(output, context);
+    }
+}
+exports.DeleteLogGroupCommand = DeleteLogGroupCommand;
+
+
+/***/ }),
+
+/***/ 56715:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteLogStreamCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteLogStreamCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteLogStreamCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteLogStreamCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteLogStreamRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteLogStreamCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteLogStreamCommand)(output, context);
+    }
+}
+exports.DeleteLogStreamCommand = DeleteLogStreamCommand;
+
+
+/***/ }),
+
+/***/ 13593:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteMetricFilterCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteMetricFilterCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteMetricFilterCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteMetricFilterCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteMetricFilterRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteMetricFilterCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteMetricFilterCommand)(output, context);
+    }
+}
+exports.DeleteMetricFilterCommand = DeleteMetricFilterCommand;
+
+
+/***/ }),
+
+/***/ 82469:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteQueryDefinitionCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteQueryDefinitionCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteQueryDefinitionCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteQueryDefinitionCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteQueryDefinitionRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DeleteQueryDefinitionResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteQueryDefinitionCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteQueryDefinitionCommand)(output, context);
+    }
+}
+exports.DeleteQueryDefinitionCommand = DeleteQueryDefinitionCommand;
+
+
+/***/ }),
+
+/***/ 48669:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteResourcePolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteResourcePolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteResourcePolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteResourcePolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteResourcePolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteResourcePolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteResourcePolicyCommand)(output, context);
+    }
+}
+exports.DeleteResourcePolicyCommand = DeleteResourcePolicyCommand;
+
+
+/***/ }),
+
+/***/ 2106:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteRetentionPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteRetentionPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteRetentionPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteRetentionPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteRetentionPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteRetentionPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteRetentionPolicyCommand)(output, context);
+    }
+}
+exports.DeleteRetentionPolicyCommand = DeleteRetentionPolicyCommand;
+
+
+/***/ }),
+
+/***/ 57275:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeleteSubscriptionFilterCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DeleteSubscriptionFilterCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DeleteSubscriptionFilterCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DeleteSubscriptionFilterCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DeleteSubscriptionFilterRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DeleteSubscriptionFilterCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DeleteSubscriptionFilterCommand)(output, context);
+    }
+}
+exports.DeleteSubscriptionFilterCommand = DeleteSubscriptionFilterCommand;
+
+
+/***/ }),
+
+/***/ 94646:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeDestinationsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeDestinationsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeDestinationsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeDestinationsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeDestinationsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeDestinationsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeDestinationsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeDestinationsCommand)(output, context);
+    }
+}
+exports.DescribeDestinationsCommand = DescribeDestinationsCommand;
+
+
+/***/ }),
+
+/***/ 37619:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeExportTasksCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeExportTasksCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeExportTasksCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeExportTasksCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeExportTasksRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeExportTasksResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeExportTasksCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeExportTasksCommand)(output, context);
+    }
+}
+exports.DescribeExportTasksCommand = DescribeExportTasksCommand;
+
+
+/***/ }),
+
+/***/ 68706:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeLogGroupsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeLogGroupsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeLogGroupsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeLogGroupsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeLogGroupsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeLogGroupsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeLogGroupsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeLogGroupsCommand)(output, context);
+    }
+}
+exports.DescribeLogGroupsCommand = DescribeLogGroupsCommand;
+
+
+/***/ }),
+
+/***/ 15229:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeLogStreamsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeLogStreamsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeLogStreamsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeLogStreamsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeLogStreamsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeLogStreamsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeLogStreamsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeLogStreamsCommand)(output, context);
+    }
+}
+exports.DescribeLogStreamsCommand = DescribeLogStreamsCommand;
+
+
+/***/ }),
+
+/***/ 51059:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeMetricFiltersCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeMetricFiltersCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeMetricFiltersCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeMetricFiltersCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeMetricFiltersRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeMetricFiltersResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeMetricFiltersCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeMetricFiltersCommand)(output, context);
+    }
+}
+exports.DescribeMetricFiltersCommand = DescribeMetricFiltersCommand;
+
+
+/***/ }),
+
+/***/ 87403:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeQueriesCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeQueriesCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeQueriesCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeQueriesCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeQueriesRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeQueriesResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeQueriesCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeQueriesCommand)(output, context);
+    }
+}
+exports.DescribeQueriesCommand = DescribeQueriesCommand;
+
+
+/***/ }),
+
+/***/ 44041:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeQueryDefinitionsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeQueryDefinitionsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeQueryDefinitionsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeQueryDefinitionsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeQueryDefinitionsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeQueryDefinitionsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeQueryDefinitionsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeQueryDefinitionsCommand)(output, context);
+    }
+}
+exports.DescribeQueryDefinitionsCommand = DescribeQueryDefinitionsCommand;
+
+
+/***/ }),
+
+/***/ 68090:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeResourcePoliciesCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeResourcePoliciesCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeResourcePoliciesCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeResourcePoliciesCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeResourcePoliciesRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeResourcePoliciesResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeResourcePoliciesCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeResourcePoliciesCommand)(output, context);
+    }
+}
+exports.DescribeResourcePoliciesCommand = DescribeResourcePoliciesCommand;
+
+
+/***/ }),
+
+/***/ 69977:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DescribeSubscriptionFiltersCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DescribeSubscriptionFiltersCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DescribeSubscriptionFiltersCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DescribeSubscriptionFiltersCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DescribeSubscriptionFiltersRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.DescribeSubscriptionFiltersResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DescribeSubscriptionFiltersCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DescribeSubscriptionFiltersCommand)(output, context);
+    }
+}
+exports.DescribeSubscriptionFiltersCommand = DescribeSubscriptionFiltersCommand;
+
+
+/***/ }),
+
+/***/ 81790:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DisassociateKmsKeyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class DisassociateKmsKeyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, DisassociateKmsKeyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "DisassociateKmsKeyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.DisassociateKmsKeyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1DisassociateKmsKeyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1DisassociateKmsKeyCommand)(output, context);
+    }
+}
+exports.DisassociateKmsKeyCommand = DisassociateKmsKeyCommand;
+
+
+/***/ }),
+
+/***/ 89045:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FilterLogEventsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class FilterLogEventsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, FilterLogEventsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "FilterLogEventsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.FilterLogEventsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.FilterLogEventsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1FilterLogEventsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1FilterLogEventsCommand)(output, context);
+    }
+}
+exports.FilterLogEventsCommand = FilterLogEventsCommand;
+
+
+/***/ }),
+
+/***/ 47496:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetDataProtectionPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class GetDataProtectionPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, GetDataProtectionPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "GetDataProtectionPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.GetDataProtectionPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.GetDataProtectionPolicyResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1GetDataProtectionPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1GetDataProtectionPolicyCommand)(output, context);
+    }
+}
+exports.GetDataProtectionPolicyCommand = GetDataProtectionPolicyCommand;
+
+
+/***/ }),
+
+/***/ 43771:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetLogEventsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class GetLogEventsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, GetLogEventsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "GetLogEventsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.GetLogEventsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.GetLogEventsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1GetLogEventsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1GetLogEventsCommand)(output, context);
+    }
+}
+exports.GetLogEventsCommand = GetLogEventsCommand;
+
+
+/***/ }),
+
+/***/ 88807:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetLogGroupFieldsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class GetLogGroupFieldsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, GetLogGroupFieldsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "GetLogGroupFieldsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.GetLogGroupFieldsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.GetLogGroupFieldsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1GetLogGroupFieldsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1GetLogGroupFieldsCommand)(output, context);
+    }
+}
+exports.GetLogGroupFieldsCommand = GetLogGroupFieldsCommand;
+
+
+/***/ }),
+
+/***/ 35628:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetLogRecordCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class GetLogRecordCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, GetLogRecordCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "GetLogRecordCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.GetLogRecordRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.GetLogRecordResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1GetLogRecordCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1GetLogRecordCommand)(output, context);
+    }
+}
+exports.GetLogRecordCommand = GetLogRecordCommand;
+
+
+/***/ }),
+
+/***/ 15678:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GetQueryResultsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class GetQueryResultsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, GetQueryResultsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "GetQueryResultsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.GetQueryResultsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.GetQueryResultsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1GetQueryResultsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1GetQueryResultsCommand)(output, context);
+    }
+}
+exports.GetQueryResultsCommand = GetQueryResultsCommand;
+
+
+/***/ }),
+
+/***/ 50556:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ListTagsForResourceCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class ListTagsForResourceCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, ListTagsForResourceCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "ListTagsForResourceCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.ListTagsForResourceRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.ListTagsForResourceResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1ListTagsForResourceCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1ListTagsForResourceCommand)(output, context);
+    }
+}
+exports.ListTagsForResourceCommand = ListTagsForResourceCommand;
+
+
+/***/ }),
+
+/***/ 84068:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ListTagsLogGroupCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class ListTagsLogGroupCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, ListTagsLogGroupCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "ListTagsLogGroupCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.ListTagsLogGroupRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.ListTagsLogGroupResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1ListTagsLogGroupCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1ListTagsLogGroupCommand)(output, context);
+    }
+}
+exports.ListTagsLogGroupCommand = ListTagsLogGroupCommand;
+
+
+/***/ }),
+
+/***/ 11051:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutDataProtectionPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutDataProtectionPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutDataProtectionPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutDataProtectionPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutDataProtectionPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.PutDataProtectionPolicyResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutDataProtectionPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutDataProtectionPolicyCommand)(output, context);
+    }
+}
+exports.PutDataProtectionPolicyCommand = PutDataProtectionPolicyCommand;
+
+
+/***/ }),
+
+/***/ 12193:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutDestinationCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutDestinationCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutDestinationCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutDestinationCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutDestinationRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.PutDestinationResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutDestinationCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutDestinationCommand)(output, context);
+    }
+}
+exports.PutDestinationCommand = PutDestinationCommand;
+
+
+/***/ }),
+
+/***/ 95531:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutDestinationPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutDestinationPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutDestinationPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutDestinationPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutDestinationPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutDestinationPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutDestinationPolicyCommand)(output, context);
+    }
+}
+exports.PutDestinationPolicyCommand = PutDestinationPolicyCommand;
+
+
+/***/ }),
+
+/***/ 31261:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutLogEventsCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutLogEventsCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutLogEventsCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutLogEventsCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutLogEventsRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.PutLogEventsResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutLogEventsCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutLogEventsCommand)(output, context);
+    }
+}
+exports.PutLogEventsCommand = PutLogEventsCommand;
+
+
+/***/ }),
+
+/***/ 57664:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutMetricFilterCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutMetricFilterCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutMetricFilterCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutMetricFilterCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutMetricFilterRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutMetricFilterCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutMetricFilterCommand)(output, context);
+    }
+}
+exports.PutMetricFilterCommand = PutMetricFilterCommand;
+
+
+/***/ }),
+
+/***/ 33440:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutQueryDefinitionCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutQueryDefinitionCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutQueryDefinitionCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutQueryDefinitionCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutQueryDefinitionRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.PutQueryDefinitionResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutQueryDefinitionCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutQueryDefinitionCommand)(output, context);
+    }
+}
+exports.PutQueryDefinitionCommand = PutQueryDefinitionCommand;
+
+
+/***/ }),
+
+/***/ 88152:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutResourcePolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutResourcePolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutResourcePolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutResourcePolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutResourcePolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.PutResourcePolicyResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutResourcePolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutResourcePolicyCommand)(output, context);
+    }
+}
+exports.PutResourcePolicyCommand = PutResourcePolicyCommand;
+
+
+/***/ }),
+
+/***/ 69827:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutRetentionPolicyCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutRetentionPolicyCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutRetentionPolicyCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutRetentionPolicyCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutRetentionPolicyRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutRetentionPolicyCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutRetentionPolicyCommand)(output, context);
+    }
+}
+exports.PutRetentionPolicyCommand = PutRetentionPolicyCommand;
+
+
+/***/ }),
+
+/***/ 10727:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PutSubscriptionFilterCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class PutSubscriptionFilterCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, PutSubscriptionFilterCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "PutSubscriptionFilterCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.PutSubscriptionFilterRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1PutSubscriptionFilterCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1PutSubscriptionFilterCommand)(output, context);
+    }
+}
+exports.PutSubscriptionFilterCommand = PutSubscriptionFilterCommand;
+
+
+/***/ }),
+
+/***/ 39727:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StartQueryCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class StartQueryCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, StartQueryCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "StartQueryCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.StartQueryRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.StartQueryResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1StartQueryCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1StartQueryCommand)(output, context);
+    }
+}
+exports.StartQueryCommand = StartQueryCommand;
+
+
+/***/ }),
+
+/***/ 4170:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StopQueryCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class StopQueryCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, StopQueryCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "StopQueryCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.StopQueryRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.StopQueryResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1StopQueryCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1StopQueryCommand)(output, context);
+    }
+}
+exports.StopQueryCommand = StopQueryCommand;
+
+
+/***/ }),
+
+/***/ 29106:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TagLogGroupCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class TagLogGroupCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, TagLogGroupCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "TagLogGroupCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.TagLogGroupRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1TagLogGroupCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1TagLogGroupCommand)(output, context);
+    }
+}
+exports.TagLogGroupCommand = TagLogGroupCommand;
+
+
+/***/ }),
+
+/***/ 16357:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TagResourceCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class TagResourceCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, TagResourceCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "TagResourceCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.TagResourceRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1TagResourceCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1TagResourceCommand)(output, context);
+    }
+}
+exports.TagResourceCommand = TagResourceCommand;
+
+
+/***/ }),
+
+/***/ 46271:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TestMetricFilterCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class TestMetricFilterCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, TestMetricFilterCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "TestMetricFilterCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.TestMetricFilterRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: models_0_1.TestMetricFilterResponseFilterSensitiveLog,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1TestMetricFilterCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1TestMetricFilterCommand)(output, context);
+    }
+}
+exports.TestMetricFilterCommand = TestMetricFilterCommand;
+
+
+/***/ }),
+
+/***/ 11043:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UntagLogGroupCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class UntagLogGroupCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, UntagLogGroupCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "UntagLogGroupCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.UntagLogGroupRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1UntagLogGroupCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1UntagLogGroupCommand)(output, context);
+    }
+}
+exports.UntagLogGroupCommand = UntagLogGroupCommand;
+
+
+/***/ }),
+
+/***/ 58237:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UntagResourceCommand = void 0;
+const middleware_endpoint_1 = __nccwpck_require__(5497);
+const middleware_serde_1 = __nccwpck_require__(93631);
+const smithy_client_1 = __nccwpck_require__(4963);
+const models_0_1 = __nccwpck_require__(99831);
+const Aws_json1_1_1 = __nccwpck_require__(97108);
+class UntagResourceCommand extends smithy_client_1.Command {
+    constructor(input) {
+        super();
+        this.input = input;
+    }
+    static getEndpointParameterInstructions() {
+        return {
+            UseFIPS: { type: "builtInParams", name: "useFipsEndpoint" },
+            Endpoint: { type: "builtInParams", name: "endpoint" },
+            Region: { type: "builtInParams", name: "region" },
+            UseDualStack: { type: "builtInParams", name: "useDualstackEndpoint" },
+        };
+    }
+    resolveMiddleware(clientStack, configuration, options) {
+        this.middlewareStack.use((0, middleware_serde_1.getSerdePlugin)(configuration, this.serialize, this.deserialize));
+        this.middlewareStack.use((0, middleware_endpoint_1.getEndpointPlugin)(configuration, UntagResourceCommand.getEndpointParameterInstructions()));
+        const stack = clientStack.concat(this.middlewareStack);
+        const { logger } = configuration;
+        const clientName = "CloudWatchLogsClient";
+        const commandName = "UntagResourceCommand";
+        const handlerExecutionContext = {
+            logger,
+            clientName,
+            commandName,
+            inputFilterSensitiveLog: models_0_1.UntagResourceRequestFilterSensitiveLog,
+            outputFilterSensitiveLog: (output) => output,
+        };
+        const { requestHandler } = configuration;
+        return stack.resolve((request) => requestHandler.handle(request.request, options || {}), handlerExecutionContext);
+    }
+    serialize(input, context) {
+        return (0, Aws_json1_1_1.serializeAws_json1_1UntagResourceCommand)(input, context);
+    }
+    deserialize(output, context) {
+        return (0, Aws_json1_1_1.deserializeAws_json1_1UntagResourceCommand)(output, context);
+    }
+}
+exports.UntagResourceCommand = UntagResourceCommand;
+
+
+/***/ }),
+
+/***/ 3732:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const tslib_1 = __nccwpck_require__(4351);
+tslib_1.__exportStar(__nccwpck_require__(98966), exports);
+tslib_1.__exportStar(__nccwpck_require__(94135), exports);
+tslib_1.__exportStar(__nccwpck_require__(64780), exports);
+tslib_1.__exportStar(__nccwpck_require__(36692), exports);
+tslib_1.__exportStar(__nccwpck_require__(39112), exports);
+tslib_1.__exportStar(__nccwpck_require__(78304), exports);
+tslib_1.__exportStar(__nccwpck_require__(1746), exports);
+tslib_1.__exportStar(__nccwpck_require__(94076), exports);
+tslib_1.__exportStar(__nccwpck_require__(56715), exports);
+tslib_1.__exportStar(__nccwpck_require__(13593), exports);
+tslib_1.__exportStar(__nccwpck_require__(82469), exports);
+tslib_1.__exportStar(__nccwpck_require__(48669), exports);
+tslib_1.__exportStar(__nccwpck_require__(2106), exports);
+tslib_1.__exportStar(__nccwpck_require__(57275), exports);
+tslib_1.__exportStar(__nccwpck_require__(94646), exports);
+tslib_1.__exportStar(__nccwpck_require__(37619), exports);
+tslib_1.__exportStar(__nccwpck_require__(68706), exports);
+tslib_1.__exportStar(__nccwpck_require__(15229), exports);
+tslib_1.__exportStar(__nccwpck_require__(51059), exports);
+tslib_1.__exportStar(__nccwpck_require__(87403), exports);
+tslib_1.__exportStar(__nccwpck_require__(44041), exports);
+tslib_1.__exportStar(__nccwpck_require__(68090), exports);
+tslib_1.__exportStar(__nccwpck_require__(69977), exports);
+tslib_1.__exportStar(__nccwpck_require__(81790), exports);
+tslib_1.__exportStar(__nccwpck_require__(89045), exports);
+tslib_1.__exportStar(__nccwpck_require__(47496), exports);
+tslib_1.__exportStar(__nccwpck_require__(43771), exports);
+tslib_1.__exportStar(__nccwpck_require__(88807), exports);
+tslib_1.__exportStar(__nccwpck_require__(35628), exports);
+tslib_1.__exportStar(__nccwpck_require__(15678), exports);
+tslib_1.__exportStar(__nccwpck_require__(50556), exports);
+tslib_1.__exportStar(__nccwpck_require__(84068), exports);
+tslib_1.__exportStar(__nccwpck_require__(11051), exports);
+tslib_1.__exportStar(__nccwpck_require__(12193), exports);
+tslib_1.__exportStar(__nccwpck_require__(95531), exports);
+tslib_1.__exportStar(__nccwpck_require__(31261), exports);
+tslib_1.__exportStar(__nccwpck_require__(57664), exports);
+tslib_1.__exportStar(__nccwpck_require__(33440), exports);
+tslib_1.__exportStar(__nccwpck_require__(88152), exports);
+tslib_1.__exportStar(__nccwpck_require__(69827), exports);
+tslib_1.__exportStar(__nccwpck_require__(10727), exports);
+tslib_1.__exportStar(__nccwpck_require__(39727), exports);
+tslib_1.__exportStar(__nccwpck_require__(4170), exports);
+tslib_1.__exportStar(__nccwpck_require__(29106), exports);
+tslib_1.__exportStar(__nccwpck_require__(16357), exports);
+tslib_1.__exportStar(__nccwpck_require__(46271), exports);
+tslib_1.__exportStar(__nccwpck_require__(11043), exports);
+tslib_1.__exportStar(__nccwpck_require__(58237), exports);
+
+
+/***/ }),
+
+/***/ 76111:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveClientEndpointParameters = void 0;
+const resolveClientEndpointParameters = (options) => {
+    return {
+        ...options,
+        useDualstackEndpoint: options.useDualstackEndpoint ?? false,
+        useFipsEndpoint: options.useFipsEndpoint ?? false,
+        defaultSigningName: "logs",
+    };
+};
+exports.resolveClientEndpointParameters = resolveClientEndpointParameters;
+
+
+/***/ }),
+
+/***/ 49488:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.defaultEndpointResolver = void 0;
+const util_endpoints_1 = __nccwpck_require__(13350);
+const ruleset_1 = __nccwpck_require__(82237);
+const defaultEndpointResolver = (endpointParams, context = {}) => {
+    return (0, util_endpoints_1.resolveEndpoint)(ruleset_1.ruleSet, {
+        endpointParams: endpointParams,
+        logger: context.logger,
+    });
+};
+exports.defaultEndpointResolver = defaultEndpointResolver;
+
+
+/***/ }),
+
+/***/ 82237:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ruleSet = void 0;
+const s = "fn", t = "argv", u = "ref";
+const a = true, b = false, c = "String", d = "PartitionResult", e = "tree", f = "error", g = "endpoint", h = "stringEquals", i = { "required": true, "default": false, "type": "Boolean" }, j = { [u]: "Region" }, k = { [u]: "Endpoint" }, l = { [s]: "booleanEquals", [t]: [{ [u]: "UseFIPS" }, true] }, m = { [s]: "booleanEquals", [t]: [{ [u]: "UseDualStack" }, true] }, n = {}, o = { [s]: "booleanEquals", [t]: [true, { [s]: "getAttr", [t]: [{ [u]: d }, "supportsFIPS"] }] }, p = { [s]: "booleanEquals", [t]: [true, { [s]: "getAttr", [t]: [{ [u]: d }, "supportsDualStack"] }] }, q = [l], r = [m];
+const _data = { version: "1.0", parameters: { Region: { required: a, type: c }, UseDualStack: i, UseFIPS: i, Endpoint: { required: b, type: c } }, rules: [{ conditions: [{ [s]: "aws.partition", [t]: [j], assign: d }], type: e, rules: [{ conditions: [{ [s]: "isSet", [t]: [k] }], type: e, rules: [{ conditions: q, error: "Invalid Configuration: FIPS and custom endpoint are not supported", type: f }, { type: e, rules: [{ conditions: r, error: "Invalid Configuration: Dualstack and custom endpoint are not supported", type: f }, { endpoint: { url: k, properties: n, headers: n }, type: g }] }] }, { conditions: [l, m], type: e, rules: [{ conditions: [o, p], type: e, rules: [{ endpoint: { url: "https://logs-fips.{Region}.{PartitionResult#dualStackDnsSuffix}", properties: n, headers: n }, type: g }] }, { error: "FIPS and DualStack are enabled, but this partition does not support one or both", type: f }] }, { conditions: q, type: e, rules: [{ conditions: [o], type: e, rules: [{ type: e, rules: [{ conditions: [{ [s]: h, [t]: [j, "us-gov-east-1"] }], endpoint: { url: "https://logs.us-gov-east-1.amazonaws.com", properties: n, headers: n }, type: g }, { conditions: [{ [s]: h, [t]: [j, "us-gov-west-1"] }], endpoint: { url: "https://logs.us-gov-west-1.amazonaws.com", properties: n, headers: n }, type: g }, { endpoint: { url: "https://logs-fips.{Region}.{PartitionResult#dnsSuffix}", properties: n, headers: n }, type: g }] }] }, { error: "FIPS is enabled but this partition does not support FIPS", type: f }] }, { conditions: r, type: e, rules: [{ conditions: [p], type: e, rules: [{ endpoint: { url: "https://logs.{Region}.{PartitionResult#dualStackDnsSuffix}", properties: n, headers: n }, type: g }] }, { error: "DualStack is enabled but this partition does not support DualStack", type: f }] }, { endpoint: { url: "https://logs.{Region}.{PartitionResult#dnsSuffix}", properties: n, headers: n }, type: g }] }] };
+exports.ruleSet = _data;
+
+
+/***/ }),
+
+/***/ 31573:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloudWatchLogsServiceException = void 0;
+const tslib_1 = __nccwpck_require__(4351);
+tslib_1.__exportStar(__nccwpck_require__(718), exports);
+tslib_1.__exportStar(__nccwpck_require__(17844), exports);
+tslib_1.__exportStar(__nccwpck_require__(3732), exports);
+tslib_1.__exportStar(__nccwpck_require__(83058), exports);
+tslib_1.__exportStar(__nccwpck_require__(984), exports);
+var CloudWatchLogsServiceException_1 = __nccwpck_require__(86548);
+Object.defineProperty(exports, "CloudWatchLogsServiceException", ({ enumerable: true, get: function () { return CloudWatchLogsServiceException_1.CloudWatchLogsServiceException; } }));
+
+
+/***/ }),
+
+/***/ 86548:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloudWatchLogsServiceException = void 0;
+const smithy_client_1 = __nccwpck_require__(4963);
+class CloudWatchLogsServiceException extends smithy_client_1.ServiceException {
+    constructor(options) {
+        super(options);
+        Object.setPrototypeOf(this, CloudWatchLogsServiceException.prototype);
+    }
+}
+exports.CloudWatchLogsServiceException = CloudWatchLogsServiceException;
+
+
+/***/ }),
+
+/***/ 83058:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const tslib_1 = __nccwpck_require__(4351);
+tslib_1.__exportStar(__nccwpck_require__(99831), exports);
+
+
+/***/ }),
+
+/***/ 99831:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MetricTransformationFilterSensitiveLog = exports.DescribeMetricFiltersRequestFilterSensitiveLog = exports.DescribeLogStreamsResponseFilterSensitiveLog = exports.LogStreamFilterSensitiveLog = exports.DescribeLogStreamsRequestFilterSensitiveLog = exports.DescribeLogGroupsResponseFilterSensitiveLog = exports.LogGroupFilterSensitiveLog = exports.DescribeLogGroupsRequestFilterSensitiveLog = exports.DescribeExportTasksResponseFilterSensitiveLog = exports.ExportTaskFilterSensitiveLog = exports.ExportTaskStatusFilterSensitiveLog = exports.ExportTaskExecutionInfoFilterSensitiveLog = exports.DescribeExportTasksRequestFilterSensitiveLog = exports.DescribeDestinationsResponseFilterSensitiveLog = exports.DestinationFilterSensitiveLog = exports.DescribeDestinationsRequestFilterSensitiveLog = exports.DeleteSubscriptionFilterRequestFilterSensitiveLog = exports.DeleteRetentionPolicyRequestFilterSensitiveLog = exports.DeleteResourcePolicyRequestFilterSensitiveLog = exports.DeleteQueryDefinitionResponseFilterSensitiveLog = exports.DeleteQueryDefinitionRequestFilterSensitiveLog = exports.DeleteMetricFilterRequestFilterSensitiveLog = exports.DeleteLogStreamRequestFilterSensitiveLog = exports.DeleteLogGroupRequestFilterSensitiveLog = exports.DeleteDestinationRequestFilterSensitiveLog = exports.DeleteDataProtectionPolicyRequestFilterSensitiveLog = exports.CreateLogStreamRequestFilterSensitiveLog = exports.CreateLogGroupRequestFilterSensitiveLog = exports.CreateExportTaskResponseFilterSensitiveLog = exports.CreateExportTaskRequestFilterSensitiveLog = exports.CancelExportTaskRequestFilterSensitiveLog = exports.AssociateKmsKeyRequestFilterSensitiveLog = exports.TooManyTagsException = exports.MalformedQueryException = exports.UnrecognizedClientException = exports.InvalidSequenceTokenException = exports.Distribution = exports.QueryStatus = exports.StandardUnit = exports.OrderBy = exports.ExportTaskStatusCode = exports.DataProtectionStatus = exports.DataAlreadyAcceptedException = exports.ResourceAlreadyExistsException = exports.LimitExceededException = exports.InvalidOperationException = exports.ServiceUnavailableException = exports.ResourceNotFoundException = exports.OperationAbortedException = exports.InvalidParameterException = void 0;
+exports.PutResourcePolicyRequestFilterSensitiveLog = exports.PutQueryDefinitionResponseFilterSensitiveLog = exports.PutQueryDefinitionRequestFilterSensitiveLog = exports.PutMetricFilterRequestFilterSensitiveLog = exports.PutLogEventsResponseFilterSensitiveLog = exports.RejectedLogEventsInfoFilterSensitiveLog = exports.PutLogEventsRequestFilterSensitiveLog = exports.PutDestinationPolicyRequestFilterSensitiveLog = exports.PutDestinationResponseFilterSensitiveLog = exports.PutDestinationRequestFilterSensitiveLog = exports.PutDataProtectionPolicyResponseFilterSensitiveLog = exports.PutDataProtectionPolicyRequestFilterSensitiveLog = exports.ListTagsLogGroupResponseFilterSensitiveLog = exports.ListTagsLogGroupRequestFilterSensitiveLog = exports.ListTagsForResourceResponseFilterSensitiveLog = exports.ListTagsForResourceRequestFilterSensitiveLog = exports.InputLogEventFilterSensitiveLog = exports.GetQueryResultsResponseFilterSensitiveLog = exports.QueryStatisticsFilterSensitiveLog = exports.ResultFieldFilterSensitiveLog = exports.GetQueryResultsRequestFilterSensitiveLog = exports.GetLogRecordResponseFilterSensitiveLog = exports.GetLogRecordRequestFilterSensitiveLog = exports.GetLogGroupFieldsResponseFilterSensitiveLog = exports.LogGroupFieldFilterSensitiveLog = exports.GetLogGroupFieldsRequestFilterSensitiveLog = exports.GetLogEventsResponseFilterSensitiveLog = exports.OutputLogEventFilterSensitiveLog = exports.GetLogEventsRequestFilterSensitiveLog = exports.GetDataProtectionPolicyResponseFilterSensitiveLog = exports.GetDataProtectionPolicyRequestFilterSensitiveLog = exports.FilterLogEventsResponseFilterSensitiveLog = exports.SearchedLogStreamFilterSensitiveLog = exports.FilterLogEventsRequestFilterSensitiveLog = exports.FilteredLogEventFilterSensitiveLog = exports.DisassociateKmsKeyRequestFilterSensitiveLog = exports.DescribeSubscriptionFiltersResponseFilterSensitiveLog = exports.SubscriptionFilterFilterSensitiveLog = exports.DescribeSubscriptionFiltersRequestFilterSensitiveLog = exports.DescribeResourcePoliciesResponseFilterSensitiveLog = exports.ResourcePolicyFilterSensitiveLog = exports.DescribeResourcePoliciesRequestFilterSensitiveLog = exports.DescribeQueryDefinitionsResponseFilterSensitiveLog = exports.QueryDefinitionFilterSensitiveLog = exports.DescribeQueryDefinitionsRequestFilterSensitiveLog = exports.DescribeQueriesResponseFilterSensitiveLog = exports.QueryInfoFilterSensitiveLog = exports.DescribeQueriesRequestFilterSensitiveLog = exports.DescribeMetricFiltersResponseFilterSensitiveLog = exports.MetricFilterFilterSensitiveLog = void 0;
+exports.UntagResourceRequestFilterSensitiveLog = exports.UntagLogGroupRequestFilterSensitiveLog = exports.TestMetricFilterResponseFilterSensitiveLog = exports.MetricFilterMatchRecordFilterSensitiveLog = exports.TestMetricFilterRequestFilterSensitiveLog = exports.TagResourceRequestFilterSensitiveLog = exports.TagLogGroupRequestFilterSensitiveLog = exports.StopQueryResponseFilterSensitiveLog = exports.StopQueryRequestFilterSensitiveLog = exports.StartQueryResponseFilterSensitiveLog = exports.StartQueryRequestFilterSensitiveLog = exports.QueryCompileErrorFilterSensitiveLog = exports.QueryCompileErrorLocationFilterSensitiveLog = exports.PutSubscriptionFilterRequestFilterSensitiveLog = exports.PutRetentionPolicyRequestFilterSensitiveLog = exports.PutResourcePolicyResponseFilterSensitiveLog = void 0;
+const CloudWatchLogsServiceException_1 = __nccwpck_require__(86548);
+class InvalidParameterException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "InvalidParameterException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "InvalidParameterException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, InvalidParameterException.prototype);
+    }
+}
+exports.InvalidParameterException = InvalidParameterException;
+class OperationAbortedException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "OperationAbortedException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "OperationAbortedException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, OperationAbortedException.prototype);
+    }
+}
+exports.OperationAbortedException = OperationAbortedException;
+class ResourceNotFoundException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "ResourceNotFoundException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "ResourceNotFoundException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, ResourceNotFoundException.prototype);
+    }
+}
+exports.ResourceNotFoundException = ResourceNotFoundException;
+class ServiceUnavailableException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "ServiceUnavailableException",
+            $fault: "server",
+            ...opts,
+        });
+        this.name = "ServiceUnavailableException";
+        this.$fault = "server";
+        Object.setPrototypeOf(this, ServiceUnavailableException.prototype);
+    }
+}
+exports.ServiceUnavailableException = ServiceUnavailableException;
+class InvalidOperationException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "InvalidOperationException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "InvalidOperationException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, InvalidOperationException.prototype);
+    }
+}
+exports.InvalidOperationException = InvalidOperationException;
+class LimitExceededException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "LimitExceededException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "LimitExceededException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, LimitExceededException.prototype);
+    }
+}
+exports.LimitExceededException = LimitExceededException;
+class ResourceAlreadyExistsException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "ResourceAlreadyExistsException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "ResourceAlreadyExistsException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, ResourceAlreadyExistsException.prototype);
+    }
+}
+exports.ResourceAlreadyExistsException = ResourceAlreadyExistsException;
+class DataAlreadyAcceptedException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "DataAlreadyAcceptedException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "DataAlreadyAcceptedException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, DataAlreadyAcceptedException.prototype);
+        this.expectedSequenceToken = opts.expectedSequenceToken;
+    }
+}
+exports.DataAlreadyAcceptedException = DataAlreadyAcceptedException;
+var DataProtectionStatus;
+(function (DataProtectionStatus) {
+    DataProtectionStatus["ACTIVATED"] = "ACTIVATED";
+    DataProtectionStatus["ARCHIVED"] = "ARCHIVED";
+    DataProtectionStatus["DELETED"] = "DELETED";
+    DataProtectionStatus["DISABLED"] = "DISABLED";
+})(DataProtectionStatus = exports.DataProtectionStatus || (exports.DataProtectionStatus = {}));
+var ExportTaskStatusCode;
+(function (ExportTaskStatusCode) {
+    ExportTaskStatusCode["CANCELLED"] = "CANCELLED";
+    ExportTaskStatusCode["COMPLETED"] = "COMPLETED";
+    ExportTaskStatusCode["FAILED"] = "FAILED";
+    ExportTaskStatusCode["PENDING"] = "PENDING";
+    ExportTaskStatusCode["PENDING_CANCEL"] = "PENDING_CANCEL";
+    ExportTaskStatusCode["RUNNING"] = "RUNNING";
+})(ExportTaskStatusCode = exports.ExportTaskStatusCode || (exports.ExportTaskStatusCode = {}));
+var OrderBy;
+(function (OrderBy) {
+    OrderBy["LastEventTime"] = "LastEventTime";
+    OrderBy["LogStreamName"] = "LogStreamName";
+})(OrderBy = exports.OrderBy || (exports.OrderBy = {}));
+var StandardUnit;
+(function (StandardUnit) {
+    StandardUnit["Bits"] = "Bits";
+    StandardUnit["BitsSecond"] = "Bits/Second";
+    StandardUnit["Bytes"] = "Bytes";
+    StandardUnit["BytesSecond"] = "Bytes/Second";
+    StandardUnit["Count"] = "Count";
+    StandardUnit["CountSecond"] = "Count/Second";
+    StandardUnit["Gigabits"] = "Gigabits";
+    StandardUnit["GigabitsSecond"] = "Gigabits/Second";
+    StandardUnit["Gigabytes"] = "Gigabytes";
+    StandardUnit["GigabytesSecond"] = "Gigabytes/Second";
+    StandardUnit["Kilobits"] = "Kilobits";
+    StandardUnit["KilobitsSecond"] = "Kilobits/Second";
+    StandardUnit["Kilobytes"] = "Kilobytes";
+    StandardUnit["KilobytesSecond"] = "Kilobytes/Second";
+    StandardUnit["Megabits"] = "Megabits";
+    StandardUnit["MegabitsSecond"] = "Megabits/Second";
+    StandardUnit["Megabytes"] = "Megabytes";
+    StandardUnit["MegabytesSecond"] = "Megabytes/Second";
+    StandardUnit["Microseconds"] = "Microseconds";
+    StandardUnit["Milliseconds"] = "Milliseconds";
+    StandardUnit["None"] = "None";
+    StandardUnit["Percent"] = "Percent";
+    StandardUnit["Seconds"] = "Seconds";
+    StandardUnit["Terabits"] = "Terabits";
+    StandardUnit["TerabitsSecond"] = "Terabits/Second";
+    StandardUnit["Terabytes"] = "Terabytes";
+    StandardUnit["TerabytesSecond"] = "Terabytes/Second";
+})(StandardUnit = exports.StandardUnit || (exports.StandardUnit = {}));
+var QueryStatus;
+(function (QueryStatus) {
+    QueryStatus["Cancelled"] = "Cancelled";
+    QueryStatus["Complete"] = "Complete";
+    QueryStatus["Failed"] = "Failed";
+    QueryStatus["Running"] = "Running";
+    QueryStatus["Scheduled"] = "Scheduled";
+    QueryStatus["Timeout"] = "Timeout";
+    QueryStatus["Unknown"] = "Unknown";
+})(QueryStatus = exports.QueryStatus || (exports.QueryStatus = {}));
+var Distribution;
+(function (Distribution) {
+    Distribution["ByLogStream"] = "ByLogStream";
+    Distribution["Random"] = "Random";
+})(Distribution = exports.Distribution || (exports.Distribution = {}));
+class InvalidSequenceTokenException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "InvalidSequenceTokenException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "InvalidSequenceTokenException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, InvalidSequenceTokenException.prototype);
+        this.expectedSequenceToken = opts.expectedSequenceToken;
+    }
+}
+exports.InvalidSequenceTokenException = InvalidSequenceTokenException;
+class UnrecognizedClientException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "UnrecognizedClientException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "UnrecognizedClientException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, UnrecognizedClientException.prototype);
+    }
+}
+exports.UnrecognizedClientException = UnrecognizedClientException;
+class MalformedQueryException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "MalformedQueryException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "MalformedQueryException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, MalformedQueryException.prototype);
+        this.queryCompileError = opts.queryCompileError;
+    }
+}
+exports.MalformedQueryException = MalformedQueryException;
+class TooManyTagsException extends CloudWatchLogsServiceException_1.CloudWatchLogsServiceException {
+    constructor(opts) {
+        super({
+            name: "TooManyTagsException",
+            $fault: "client",
+            ...opts,
+        });
+        this.name = "TooManyTagsException";
+        this.$fault = "client";
+        Object.setPrototypeOf(this, TooManyTagsException.prototype);
+        this.resourceName = opts.resourceName;
+    }
+}
+exports.TooManyTagsException = TooManyTagsException;
+const AssociateKmsKeyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.AssociateKmsKeyRequestFilterSensitiveLog = AssociateKmsKeyRequestFilterSensitiveLog;
+const CancelExportTaskRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.CancelExportTaskRequestFilterSensitiveLog = CancelExportTaskRequestFilterSensitiveLog;
+const CreateExportTaskRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.CreateExportTaskRequestFilterSensitiveLog = CreateExportTaskRequestFilterSensitiveLog;
+const CreateExportTaskResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.CreateExportTaskResponseFilterSensitiveLog = CreateExportTaskResponseFilterSensitiveLog;
+const CreateLogGroupRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.CreateLogGroupRequestFilterSensitiveLog = CreateLogGroupRequestFilterSensitiveLog;
+const CreateLogStreamRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.CreateLogStreamRequestFilterSensitiveLog = CreateLogStreamRequestFilterSensitiveLog;
+const DeleteDataProtectionPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteDataProtectionPolicyRequestFilterSensitiveLog = DeleteDataProtectionPolicyRequestFilterSensitiveLog;
+const DeleteDestinationRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteDestinationRequestFilterSensitiveLog = DeleteDestinationRequestFilterSensitiveLog;
+const DeleteLogGroupRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteLogGroupRequestFilterSensitiveLog = DeleteLogGroupRequestFilterSensitiveLog;
+const DeleteLogStreamRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteLogStreamRequestFilterSensitiveLog = DeleteLogStreamRequestFilterSensitiveLog;
+const DeleteMetricFilterRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteMetricFilterRequestFilterSensitiveLog = DeleteMetricFilterRequestFilterSensitiveLog;
+const DeleteQueryDefinitionRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteQueryDefinitionRequestFilterSensitiveLog = DeleteQueryDefinitionRequestFilterSensitiveLog;
+const DeleteQueryDefinitionResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteQueryDefinitionResponseFilterSensitiveLog = DeleteQueryDefinitionResponseFilterSensitiveLog;
+const DeleteResourcePolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteResourcePolicyRequestFilterSensitiveLog = DeleteResourcePolicyRequestFilterSensitiveLog;
+const DeleteRetentionPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteRetentionPolicyRequestFilterSensitiveLog = DeleteRetentionPolicyRequestFilterSensitiveLog;
+const DeleteSubscriptionFilterRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DeleteSubscriptionFilterRequestFilterSensitiveLog = DeleteSubscriptionFilterRequestFilterSensitiveLog;
+const DescribeDestinationsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeDestinationsRequestFilterSensitiveLog = DescribeDestinationsRequestFilterSensitiveLog;
+const DestinationFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DestinationFilterSensitiveLog = DestinationFilterSensitiveLog;
+const DescribeDestinationsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeDestinationsResponseFilterSensitiveLog = DescribeDestinationsResponseFilterSensitiveLog;
+const DescribeExportTasksRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeExportTasksRequestFilterSensitiveLog = DescribeExportTasksRequestFilterSensitiveLog;
+const ExportTaskExecutionInfoFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ExportTaskExecutionInfoFilterSensitiveLog = ExportTaskExecutionInfoFilterSensitiveLog;
+const ExportTaskStatusFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ExportTaskStatusFilterSensitiveLog = ExportTaskStatusFilterSensitiveLog;
+const ExportTaskFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ExportTaskFilterSensitiveLog = ExportTaskFilterSensitiveLog;
+const DescribeExportTasksResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeExportTasksResponseFilterSensitiveLog = DescribeExportTasksResponseFilterSensitiveLog;
+const DescribeLogGroupsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeLogGroupsRequestFilterSensitiveLog = DescribeLogGroupsRequestFilterSensitiveLog;
+const LogGroupFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.LogGroupFilterSensitiveLog = LogGroupFilterSensitiveLog;
+const DescribeLogGroupsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeLogGroupsResponseFilterSensitiveLog = DescribeLogGroupsResponseFilterSensitiveLog;
+const DescribeLogStreamsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeLogStreamsRequestFilterSensitiveLog = DescribeLogStreamsRequestFilterSensitiveLog;
+const LogStreamFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.LogStreamFilterSensitiveLog = LogStreamFilterSensitiveLog;
+const DescribeLogStreamsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeLogStreamsResponseFilterSensitiveLog = DescribeLogStreamsResponseFilterSensitiveLog;
+const DescribeMetricFiltersRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeMetricFiltersRequestFilterSensitiveLog = DescribeMetricFiltersRequestFilterSensitiveLog;
+const MetricTransformationFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.MetricTransformationFilterSensitiveLog = MetricTransformationFilterSensitiveLog;
+const MetricFilterFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.MetricFilterFilterSensitiveLog = MetricFilterFilterSensitiveLog;
+const DescribeMetricFiltersResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeMetricFiltersResponseFilterSensitiveLog = DescribeMetricFiltersResponseFilterSensitiveLog;
+const DescribeQueriesRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeQueriesRequestFilterSensitiveLog = DescribeQueriesRequestFilterSensitiveLog;
+const QueryInfoFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.QueryInfoFilterSensitiveLog = QueryInfoFilterSensitiveLog;
+const DescribeQueriesResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeQueriesResponseFilterSensitiveLog = DescribeQueriesResponseFilterSensitiveLog;
+const DescribeQueryDefinitionsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeQueryDefinitionsRequestFilterSensitiveLog = DescribeQueryDefinitionsRequestFilterSensitiveLog;
+const QueryDefinitionFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.QueryDefinitionFilterSensitiveLog = QueryDefinitionFilterSensitiveLog;
+const DescribeQueryDefinitionsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeQueryDefinitionsResponseFilterSensitiveLog = DescribeQueryDefinitionsResponseFilterSensitiveLog;
+const DescribeResourcePoliciesRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeResourcePoliciesRequestFilterSensitiveLog = DescribeResourcePoliciesRequestFilterSensitiveLog;
+const ResourcePolicyFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ResourcePolicyFilterSensitiveLog = ResourcePolicyFilterSensitiveLog;
+const DescribeResourcePoliciesResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeResourcePoliciesResponseFilterSensitiveLog = DescribeResourcePoliciesResponseFilterSensitiveLog;
+const DescribeSubscriptionFiltersRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeSubscriptionFiltersRequestFilterSensitiveLog = DescribeSubscriptionFiltersRequestFilterSensitiveLog;
+const SubscriptionFilterFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.SubscriptionFilterFilterSensitiveLog = SubscriptionFilterFilterSensitiveLog;
+const DescribeSubscriptionFiltersResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DescribeSubscriptionFiltersResponseFilterSensitiveLog = DescribeSubscriptionFiltersResponseFilterSensitiveLog;
+const DisassociateKmsKeyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.DisassociateKmsKeyRequestFilterSensitiveLog = DisassociateKmsKeyRequestFilterSensitiveLog;
+const FilteredLogEventFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.FilteredLogEventFilterSensitiveLog = FilteredLogEventFilterSensitiveLog;
+const FilterLogEventsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.FilterLogEventsRequestFilterSensitiveLog = FilterLogEventsRequestFilterSensitiveLog;
+const SearchedLogStreamFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.SearchedLogStreamFilterSensitiveLog = SearchedLogStreamFilterSensitiveLog;
+const FilterLogEventsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.FilterLogEventsResponseFilterSensitiveLog = FilterLogEventsResponseFilterSensitiveLog;
+const GetDataProtectionPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetDataProtectionPolicyRequestFilterSensitiveLog = GetDataProtectionPolicyRequestFilterSensitiveLog;
+const GetDataProtectionPolicyResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetDataProtectionPolicyResponseFilterSensitiveLog = GetDataProtectionPolicyResponseFilterSensitiveLog;
+const GetLogEventsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogEventsRequestFilterSensitiveLog = GetLogEventsRequestFilterSensitiveLog;
+const OutputLogEventFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.OutputLogEventFilterSensitiveLog = OutputLogEventFilterSensitiveLog;
+const GetLogEventsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogEventsResponseFilterSensitiveLog = GetLogEventsResponseFilterSensitiveLog;
+const GetLogGroupFieldsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogGroupFieldsRequestFilterSensitiveLog = GetLogGroupFieldsRequestFilterSensitiveLog;
+const LogGroupFieldFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.LogGroupFieldFilterSensitiveLog = LogGroupFieldFilterSensitiveLog;
+const GetLogGroupFieldsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogGroupFieldsResponseFilterSensitiveLog = GetLogGroupFieldsResponseFilterSensitiveLog;
+const GetLogRecordRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogRecordRequestFilterSensitiveLog = GetLogRecordRequestFilterSensitiveLog;
+const GetLogRecordResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetLogRecordResponseFilterSensitiveLog = GetLogRecordResponseFilterSensitiveLog;
+const GetQueryResultsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetQueryResultsRequestFilterSensitiveLog = GetQueryResultsRequestFilterSensitiveLog;
+const ResultFieldFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ResultFieldFilterSensitiveLog = ResultFieldFilterSensitiveLog;
+const QueryStatisticsFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.QueryStatisticsFilterSensitiveLog = QueryStatisticsFilterSensitiveLog;
+const GetQueryResultsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.GetQueryResultsResponseFilterSensitiveLog = GetQueryResultsResponseFilterSensitiveLog;
+const InputLogEventFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.InputLogEventFilterSensitiveLog = InputLogEventFilterSensitiveLog;
+const ListTagsForResourceRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ListTagsForResourceRequestFilterSensitiveLog = ListTagsForResourceRequestFilterSensitiveLog;
+const ListTagsForResourceResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ListTagsForResourceResponseFilterSensitiveLog = ListTagsForResourceResponseFilterSensitiveLog;
+const ListTagsLogGroupRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ListTagsLogGroupRequestFilterSensitiveLog = ListTagsLogGroupRequestFilterSensitiveLog;
+const ListTagsLogGroupResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.ListTagsLogGroupResponseFilterSensitiveLog = ListTagsLogGroupResponseFilterSensitiveLog;
+const PutDataProtectionPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutDataProtectionPolicyRequestFilterSensitiveLog = PutDataProtectionPolicyRequestFilterSensitiveLog;
+const PutDataProtectionPolicyResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutDataProtectionPolicyResponseFilterSensitiveLog = PutDataProtectionPolicyResponseFilterSensitiveLog;
+const PutDestinationRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutDestinationRequestFilterSensitiveLog = PutDestinationRequestFilterSensitiveLog;
+const PutDestinationResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutDestinationResponseFilterSensitiveLog = PutDestinationResponseFilterSensitiveLog;
+const PutDestinationPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutDestinationPolicyRequestFilterSensitiveLog = PutDestinationPolicyRequestFilterSensitiveLog;
+const PutLogEventsRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutLogEventsRequestFilterSensitiveLog = PutLogEventsRequestFilterSensitiveLog;
+const RejectedLogEventsInfoFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.RejectedLogEventsInfoFilterSensitiveLog = RejectedLogEventsInfoFilterSensitiveLog;
+const PutLogEventsResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutLogEventsResponseFilterSensitiveLog = PutLogEventsResponseFilterSensitiveLog;
+const PutMetricFilterRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutMetricFilterRequestFilterSensitiveLog = PutMetricFilterRequestFilterSensitiveLog;
+const PutQueryDefinitionRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutQueryDefinitionRequestFilterSensitiveLog = PutQueryDefinitionRequestFilterSensitiveLog;
+const PutQueryDefinitionResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutQueryDefinitionResponseFilterSensitiveLog = PutQueryDefinitionResponseFilterSensitiveLog;
+const PutResourcePolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutResourcePolicyRequestFilterSensitiveLog = PutResourcePolicyRequestFilterSensitiveLog;
+const PutResourcePolicyResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutResourcePolicyResponseFilterSensitiveLog = PutResourcePolicyResponseFilterSensitiveLog;
+const PutRetentionPolicyRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutRetentionPolicyRequestFilterSensitiveLog = PutRetentionPolicyRequestFilterSensitiveLog;
+const PutSubscriptionFilterRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.PutSubscriptionFilterRequestFilterSensitiveLog = PutSubscriptionFilterRequestFilterSensitiveLog;
+const QueryCompileErrorLocationFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.QueryCompileErrorLocationFilterSensitiveLog = QueryCompileErrorLocationFilterSensitiveLog;
+const QueryCompileErrorFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.QueryCompileErrorFilterSensitiveLog = QueryCompileErrorFilterSensitiveLog;
+const StartQueryRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.StartQueryRequestFilterSensitiveLog = StartQueryRequestFilterSensitiveLog;
+const StartQueryResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.StartQueryResponseFilterSensitiveLog = StartQueryResponseFilterSensitiveLog;
+const StopQueryRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.StopQueryRequestFilterSensitiveLog = StopQueryRequestFilterSensitiveLog;
+const StopQueryResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.StopQueryResponseFilterSensitiveLog = StopQueryResponseFilterSensitiveLog;
+const TagLogGroupRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.TagLogGroupRequestFilterSensitiveLog = TagLogGroupRequestFilterSensitiveLog;
+const TagResourceRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.TagResourceRequestFilterSensitiveLog = TagResourceRequestFilterSensitiveLog;
+const TestMetricFilterRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.TestMetricFilterRequestFilterSensitiveLog = TestMetricFilterRequestFilterSensitiveLog;
+const MetricFilterMatchRecordFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.MetricFilterMatchRecordFilterSensitiveLog = MetricFilterMatchRecordFilterSensitiveLog;
+const TestMetricFilterResponseFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.TestMetricFilterResponseFilterSensitiveLog = TestMetricFilterResponseFilterSensitiveLog;
+const UntagLogGroupRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.UntagLogGroupRequestFilterSensitiveLog = UntagLogGroupRequestFilterSensitiveLog;
+const UntagResourceRequestFilterSensitiveLog = (obj) => ({
+    ...obj,
+});
+exports.UntagResourceRequestFilterSensitiveLog = UntagResourceRequestFilterSensitiveLog;
+
+
+/***/ }),
+
+/***/ 32082:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateDescribeDestinations = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const DescribeDestinationsCommand_1 = __nccwpck_require__(94646);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new DescribeDestinationsCommand_1.DescribeDestinationsCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.describeDestinations(input, ...args);
+};
+async function* paginateDescribeDestinations(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateDescribeDestinations = paginateDescribeDestinations;
+
+
+/***/ }),
+
+/***/ 77980:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateDescribeLogGroups = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const DescribeLogGroupsCommand_1 = __nccwpck_require__(68706);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new DescribeLogGroupsCommand_1.DescribeLogGroupsCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.describeLogGroups(input, ...args);
+};
+async function* paginateDescribeLogGroups(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateDescribeLogGroups = paginateDescribeLogGroups;
+
+
+/***/ }),
+
+/***/ 87820:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateDescribeLogStreams = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const DescribeLogStreamsCommand_1 = __nccwpck_require__(15229);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new DescribeLogStreamsCommand_1.DescribeLogStreamsCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.describeLogStreams(input, ...args);
+};
+async function* paginateDescribeLogStreams(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateDescribeLogStreams = paginateDescribeLogStreams;
+
+
+/***/ }),
+
+/***/ 37298:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateDescribeMetricFilters = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const DescribeMetricFiltersCommand_1 = __nccwpck_require__(51059);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new DescribeMetricFiltersCommand_1.DescribeMetricFiltersCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.describeMetricFilters(input, ...args);
+};
+async function* paginateDescribeMetricFilters(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateDescribeMetricFilters = paginateDescribeMetricFilters;
+
+
+/***/ }),
+
+/***/ 10809:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateDescribeSubscriptionFilters = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const DescribeSubscriptionFiltersCommand_1 = __nccwpck_require__(69977);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new DescribeSubscriptionFiltersCommand_1.DescribeSubscriptionFiltersCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.describeSubscriptionFilters(input, ...args);
+};
+async function* paginateDescribeSubscriptionFilters(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateDescribeSubscriptionFilters = paginateDescribeSubscriptionFilters;
+
+
+/***/ }),
+
+/***/ 27544:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateFilterLogEvents = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const FilterLogEventsCommand_1 = __nccwpck_require__(89045);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new FilterLogEventsCommand_1.FilterLogEventsCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.filterLogEvents(input, ...args);
+};
+async function* paginateFilterLogEvents(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateFilterLogEvents = paginateFilterLogEvents;
+
+
+/***/ }),
+
+/***/ 87081:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.paginateGetLogEvents = void 0;
+const CloudWatchLogs_1 = __nccwpck_require__(718);
+const CloudWatchLogsClient_1 = __nccwpck_require__(17844);
+const GetLogEventsCommand_1 = __nccwpck_require__(43771);
+const makePagedClientRequest = async (client, input, ...args) => {
+    return await client.send(new GetLogEventsCommand_1.GetLogEventsCommand(input), ...args);
+};
+const makePagedRequest = async (client, input, ...args) => {
+    return await client.getLogEvents(input, ...args);
+};
+async function* paginateGetLogEvents(config, input, ...additionalArguments) {
+    let token = config.startingToken || undefined;
+    let hasNext = true;
+    let page;
+    while (hasNext) {
+        input.nextToken = token;
+        input["limit"] = config.pageSize;
+        if (config.client instanceof CloudWatchLogs_1.CloudWatchLogs) {
+            page = await makePagedRequest(config.client, input, ...additionalArguments);
+        }
+        else if (config.client instanceof CloudWatchLogsClient_1.CloudWatchLogsClient) {
+            page = await makePagedClientRequest(config.client, input, ...additionalArguments);
+        }
+        else {
+            throw new Error("Invalid client, expected CloudWatchLogs | CloudWatchLogsClient");
+        }
+        yield page;
+        const prevToken = token;
+        token = page.nextForwardToken;
+        hasNext = !!(token && (!config.stopOnSameToken || token !== prevToken));
+    }
+    return undefined;
+}
+exports.paginateGetLogEvents = paginateGetLogEvents;
+
+
+/***/ }),
+
+/***/ 58099:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+
+/***/ 984:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const tslib_1 = __nccwpck_require__(4351);
+tslib_1.__exportStar(__nccwpck_require__(32082), exports);
+tslib_1.__exportStar(__nccwpck_require__(77980), exports);
+tslib_1.__exportStar(__nccwpck_require__(87820), exports);
+tslib_1.__exportStar(__nccwpck_require__(37298), exports);
+tslib_1.__exportStar(__nccwpck_require__(10809), exports);
+tslib_1.__exportStar(__nccwpck_require__(27544), exports);
+tslib_1.__exportStar(__nccwpck_require__(87081), exports);
+tslib_1.__exportStar(__nccwpck_require__(58099), exports);
+
+
+/***/ }),
+
+/***/ 97108:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.deserializeAws_json1_1CancelExportTaskCommand = exports.deserializeAws_json1_1AssociateKmsKeyCommand = exports.serializeAws_json1_1UntagResourceCommand = exports.serializeAws_json1_1UntagLogGroupCommand = exports.serializeAws_json1_1TestMetricFilterCommand = exports.serializeAws_json1_1TagResourceCommand = exports.serializeAws_json1_1TagLogGroupCommand = exports.serializeAws_json1_1StopQueryCommand = exports.serializeAws_json1_1StartQueryCommand = exports.serializeAws_json1_1PutSubscriptionFilterCommand = exports.serializeAws_json1_1PutRetentionPolicyCommand = exports.serializeAws_json1_1PutResourcePolicyCommand = exports.serializeAws_json1_1PutQueryDefinitionCommand = exports.serializeAws_json1_1PutMetricFilterCommand = exports.serializeAws_json1_1PutLogEventsCommand = exports.serializeAws_json1_1PutDestinationPolicyCommand = exports.serializeAws_json1_1PutDestinationCommand = exports.serializeAws_json1_1PutDataProtectionPolicyCommand = exports.serializeAws_json1_1ListTagsLogGroupCommand = exports.serializeAws_json1_1ListTagsForResourceCommand = exports.serializeAws_json1_1GetQueryResultsCommand = exports.serializeAws_json1_1GetLogRecordCommand = exports.serializeAws_json1_1GetLogGroupFieldsCommand = exports.serializeAws_json1_1GetLogEventsCommand = exports.serializeAws_json1_1GetDataProtectionPolicyCommand = exports.serializeAws_json1_1FilterLogEventsCommand = exports.serializeAws_json1_1DisassociateKmsKeyCommand = exports.serializeAws_json1_1DescribeSubscriptionFiltersCommand = exports.serializeAws_json1_1DescribeResourcePoliciesCommand = exports.serializeAws_json1_1DescribeQueryDefinitionsCommand = exports.serializeAws_json1_1DescribeQueriesCommand = exports.serializeAws_json1_1DescribeMetricFiltersCommand = exports.serializeAws_json1_1DescribeLogStreamsCommand = exports.serializeAws_json1_1DescribeLogGroupsCommand = exports.serializeAws_json1_1DescribeExportTasksCommand = exports.serializeAws_json1_1DescribeDestinationsCommand = exports.serializeAws_json1_1DeleteSubscriptionFilterCommand = exports.serializeAws_json1_1DeleteRetentionPolicyCommand = exports.serializeAws_json1_1DeleteResourcePolicyCommand = exports.serializeAws_json1_1DeleteQueryDefinitionCommand = exports.serializeAws_json1_1DeleteMetricFilterCommand = exports.serializeAws_json1_1DeleteLogStreamCommand = exports.serializeAws_json1_1DeleteLogGroupCommand = exports.serializeAws_json1_1DeleteDestinationCommand = exports.serializeAws_json1_1DeleteDataProtectionPolicyCommand = exports.serializeAws_json1_1CreateLogStreamCommand = exports.serializeAws_json1_1CreateLogGroupCommand = exports.serializeAws_json1_1CreateExportTaskCommand = exports.serializeAws_json1_1CancelExportTaskCommand = exports.serializeAws_json1_1AssociateKmsKeyCommand = void 0;
+exports.deserializeAws_json1_1UntagResourceCommand = exports.deserializeAws_json1_1UntagLogGroupCommand = exports.deserializeAws_json1_1TestMetricFilterCommand = exports.deserializeAws_json1_1TagResourceCommand = exports.deserializeAws_json1_1TagLogGroupCommand = exports.deserializeAws_json1_1StopQueryCommand = exports.deserializeAws_json1_1StartQueryCommand = exports.deserializeAws_json1_1PutSubscriptionFilterCommand = exports.deserializeAws_json1_1PutRetentionPolicyCommand = exports.deserializeAws_json1_1PutResourcePolicyCommand = exports.deserializeAws_json1_1PutQueryDefinitionCommand = exports.deserializeAws_json1_1PutMetricFilterCommand = exports.deserializeAws_json1_1PutLogEventsCommand = exports.deserializeAws_json1_1PutDestinationPolicyCommand = exports.deserializeAws_json1_1PutDestinationCommand = exports.deserializeAws_json1_1PutDataProtectionPolicyCommand = exports.deserializeAws_json1_1ListTagsLogGroupCommand = exports.deserializeAws_json1_1ListTagsForResourceCommand = exports.deserializeAws_json1_1GetQueryResultsCommand = exports.deserializeAws_json1_1GetLogRecordCommand = exports.deserializeAws_json1_1GetLogGroupFieldsCommand = exports.deserializeAws_json1_1GetLogEventsCommand = exports.deserializeAws_json1_1GetDataProtectionPolicyCommand = exports.deserializeAws_json1_1FilterLogEventsCommand = exports.deserializeAws_json1_1DisassociateKmsKeyCommand = exports.deserializeAws_json1_1DescribeSubscriptionFiltersCommand = exports.deserializeAws_json1_1DescribeResourcePoliciesCommand = exports.deserializeAws_json1_1DescribeQueryDefinitionsCommand = exports.deserializeAws_json1_1DescribeQueriesCommand = exports.deserializeAws_json1_1DescribeMetricFiltersCommand = exports.deserializeAws_json1_1DescribeLogStreamsCommand = exports.deserializeAws_json1_1DescribeLogGroupsCommand = exports.deserializeAws_json1_1DescribeExportTasksCommand = exports.deserializeAws_json1_1DescribeDestinationsCommand = exports.deserializeAws_json1_1DeleteSubscriptionFilterCommand = exports.deserializeAws_json1_1DeleteRetentionPolicyCommand = exports.deserializeAws_json1_1DeleteResourcePolicyCommand = exports.deserializeAws_json1_1DeleteQueryDefinitionCommand = exports.deserializeAws_json1_1DeleteMetricFilterCommand = exports.deserializeAws_json1_1DeleteLogStreamCommand = exports.deserializeAws_json1_1DeleteLogGroupCommand = exports.deserializeAws_json1_1DeleteDestinationCommand = exports.deserializeAws_json1_1DeleteDataProtectionPolicyCommand = exports.deserializeAws_json1_1CreateLogStreamCommand = exports.deserializeAws_json1_1CreateLogGroupCommand = exports.deserializeAws_json1_1CreateExportTaskCommand = void 0;
+const protocol_http_1 = __nccwpck_require__(70223);
+const smithy_client_1 = __nccwpck_require__(4963);
+const CloudWatchLogsServiceException_1 = __nccwpck_require__(86548);
+const models_0_1 = __nccwpck_require__(99831);
+const serializeAws_json1_1AssociateKmsKeyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.AssociateKmsKey",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1AssociateKmsKeyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1AssociateKmsKeyCommand = serializeAws_json1_1AssociateKmsKeyCommand;
+const serializeAws_json1_1CancelExportTaskCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.CancelExportTask",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1CancelExportTaskRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1CancelExportTaskCommand = serializeAws_json1_1CancelExportTaskCommand;
+const serializeAws_json1_1CreateExportTaskCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.CreateExportTask",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1CreateExportTaskRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1CreateExportTaskCommand = serializeAws_json1_1CreateExportTaskCommand;
+const serializeAws_json1_1CreateLogGroupCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.CreateLogGroup",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1CreateLogGroupRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1CreateLogGroupCommand = serializeAws_json1_1CreateLogGroupCommand;
+const serializeAws_json1_1CreateLogStreamCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.CreateLogStream",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1CreateLogStreamRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1CreateLogStreamCommand = serializeAws_json1_1CreateLogStreamCommand;
+const serializeAws_json1_1DeleteDataProtectionPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteDataProtectionPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteDataProtectionPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteDataProtectionPolicyCommand = serializeAws_json1_1DeleteDataProtectionPolicyCommand;
+const serializeAws_json1_1DeleteDestinationCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteDestination",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteDestinationRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteDestinationCommand = serializeAws_json1_1DeleteDestinationCommand;
+const serializeAws_json1_1DeleteLogGroupCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteLogGroup",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteLogGroupRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteLogGroupCommand = serializeAws_json1_1DeleteLogGroupCommand;
+const serializeAws_json1_1DeleteLogStreamCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteLogStream",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteLogStreamRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteLogStreamCommand = serializeAws_json1_1DeleteLogStreamCommand;
+const serializeAws_json1_1DeleteMetricFilterCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteMetricFilter",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteMetricFilterRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteMetricFilterCommand = serializeAws_json1_1DeleteMetricFilterCommand;
+const serializeAws_json1_1DeleteQueryDefinitionCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteQueryDefinition",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteQueryDefinitionRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteQueryDefinitionCommand = serializeAws_json1_1DeleteQueryDefinitionCommand;
+const serializeAws_json1_1DeleteResourcePolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteResourcePolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteResourcePolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteResourcePolicyCommand = serializeAws_json1_1DeleteResourcePolicyCommand;
+const serializeAws_json1_1DeleteRetentionPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteRetentionPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteRetentionPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteRetentionPolicyCommand = serializeAws_json1_1DeleteRetentionPolicyCommand;
+const serializeAws_json1_1DeleteSubscriptionFilterCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DeleteSubscriptionFilter",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DeleteSubscriptionFilterRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DeleteSubscriptionFilterCommand = serializeAws_json1_1DeleteSubscriptionFilterCommand;
+const serializeAws_json1_1DescribeDestinationsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeDestinations",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeDestinationsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeDestinationsCommand = serializeAws_json1_1DescribeDestinationsCommand;
+const serializeAws_json1_1DescribeExportTasksCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeExportTasks",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeExportTasksRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeExportTasksCommand = serializeAws_json1_1DescribeExportTasksCommand;
+const serializeAws_json1_1DescribeLogGroupsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeLogGroups",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeLogGroupsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeLogGroupsCommand = serializeAws_json1_1DescribeLogGroupsCommand;
+const serializeAws_json1_1DescribeLogStreamsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeLogStreams",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeLogStreamsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeLogStreamsCommand = serializeAws_json1_1DescribeLogStreamsCommand;
+const serializeAws_json1_1DescribeMetricFiltersCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeMetricFilters",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeMetricFiltersRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeMetricFiltersCommand = serializeAws_json1_1DescribeMetricFiltersCommand;
+const serializeAws_json1_1DescribeQueriesCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeQueries",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeQueriesRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeQueriesCommand = serializeAws_json1_1DescribeQueriesCommand;
+const serializeAws_json1_1DescribeQueryDefinitionsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeQueryDefinitions",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeQueryDefinitionsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeQueryDefinitionsCommand = serializeAws_json1_1DescribeQueryDefinitionsCommand;
+const serializeAws_json1_1DescribeResourcePoliciesCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeResourcePolicies",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeResourcePoliciesRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeResourcePoliciesCommand = serializeAws_json1_1DescribeResourcePoliciesCommand;
+const serializeAws_json1_1DescribeSubscriptionFiltersCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DescribeSubscriptionFilters",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DescribeSubscriptionFiltersRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DescribeSubscriptionFiltersCommand = serializeAws_json1_1DescribeSubscriptionFiltersCommand;
+const serializeAws_json1_1DisassociateKmsKeyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.DisassociateKmsKey",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1DisassociateKmsKeyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1DisassociateKmsKeyCommand = serializeAws_json1_1DisassociateKmsKeyCommand;
+const serializeAws_json1_1FilterLogEventsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.FilterLogEvents",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1FilterLogEventsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1FilterLogEventsCommand = serializeAws_json1_1FilterLogEventsCommand;
+const serializeAws_json1_1GetDataProtectionPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.GetDataProtectionPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1GetDataProtectionPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1GetDataProtectionPolicyCommand = serializeAws_json1_1GetDataProtectionPolicyCommand;
+const serializeAws_json1_1GetLogEventsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.GetLogEvents",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1GetLogEventsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1GetLogEventsCommand = serializeAws_json1_1GetLogEventsCommand;
+const serializeAws_json1_1GetLogGroupFieldsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.GetLogGroupFields",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1GetLogGroupFieldsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1GetLogGroupFieldsCommand = serializeAws_json1_1GetLogGroupFieldsCommand;
+const serializeAws_json1_1GetLogRecordCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.GetLogRecord",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1GetLogRecordRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1GetLogRecordCommand = serializeAws_json1_1GetLogRecordCommand;
+const serializeAws_json1_1GetQueryResultsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.GetQueryResults",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1GetQueryResultsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1GetQueryResultsCommand = serializeAws_json1_1GetQueryResultsCommand;
+const serializeAws_json1_1ListTagsForResourceCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.ListTagsForResource",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1ListTagsForResourceRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1ListTagsForResourceCommand = serializeAws_json1_1ListTagsForResourceCommand;
+const serializeAws_json1_1ListTagsLogGroupCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.ListTagsLogGroup",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1ListTagsLogGroupRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1ListTagsLogGroupCommand = serializeAws_json1_1ListTagsLogGroupCommand;
+const serializeAws_json1_1PutDataProtectionPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutDataProtectionPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutDataProtectionPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutDataProtectionPolicyCommand = serializeAws_json1_1PutDataProtectionPolicyCommand;
+const serializeAws_json1_1PutDestinationCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutDestination",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutDestinationRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutDestinationCommand = serializeAws_json1_1PutDestinationCommand;
+const serializeAws_json1_1PutDestinationPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutDestinationPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutDestinationPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutDestinationPolicyCommand = serializeAws_json1_1PutDestinationPolicyCommand;
+const serializeAws_json1_1PutLogEventsCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutLogEvents",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutLogEventsRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutLogEventsCommand = serializeAws_json1_1PutLogEventsCommand;
+const serializeAws_json1_1PutMetricFilterCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutMetricFilter",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutMetricFilterRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutMetricFilterCommand = serializeAws_json1_1PutMetricFilterCommand;
+const serializeAws_json1_1PutQueryDefinitionCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutQueryDefinition",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutQueryDefinitionRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutQueryDefinitionCommand = serializeAws_json1_1PutQueryDefinitionCommand;
+const serializeAws_json1_1PutResourcePolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutResourcePolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutResourcePolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutResourcePolicyCommand = serializeAws_json1_1PutResourcePolicyCommand;
+const serializeAws_json1_1PutRetentionPolicyCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutRetentionPolicy",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutRetentionPolicyRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutRetentionPolicyCommand = serializeAws_json1_1PutRetentionPolicyCommand;
+const serializeAws_json1_1PutSubscriptionFilterCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.PutSubscriptionFilter",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1PutSubscriptionFilterRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1PutSubscriptionFilterCommand = serializeAws_json1_1PutSubscriptionFilterCommand;
+const serializeAws_json1_1StartQueryCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.StartQuery",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1StartQueryRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1StartQueryCommand = serializeAws_json1_1StartQueryCommand;
+const serializeAws_json1_1StopQueryCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.StopQuery",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1StopQueryRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1StopQueryCommand = serializeAws_json1_1StopQueryCommand;
+const serializeAws_json1_1TagLogGroupCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.TagLogGroup",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1TagLogGroupRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1TagLogGroupCommand = serializeAws_json1_1TagLogGroupCommand;
+const serializeAws_json1_1TagResourceCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.TagResource",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1TagResourceRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1TagResourceCommand = serializeAws_json1_1TagResourceCommand;
+const serializeAws_json1_1TestMetricFilterCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.TestMetricFilter",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1TestMetricFilterRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1TestMetricFilterCommand = serializeAws_json1_1TestMetricFilterCommand;
+const serializeAws_json1_1UntagLogGroupCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.UntagLogGroup",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1UntagLogGroupRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1UntagLogGroupCommand = serializeAws_json1_1UntagLogGroupCommand;
+const serializeAws_json1_1UntagResourceCommand = async (input, context) => {
+    const headers = {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "Logs_20140328.UntagResource",
+    };
+    let body;
+    body = JSON.stringify(serializeAws_json1_1UntagResourceRequest(input, context));
+    return buildHttpRpcRequest(context, headers, "/", undefined, body);
+};
+exports.serializeAws_json1_1UntagResourceCommand = serializeAws_json1_1UntagResourceCommand;
+const deserializeAws_json1_1AssociateKmsKeyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1AssociateKmsKeyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1AssociateKmsKeyCommand = deserializeAws_json1_1AssociateKmsKeyCommand;
+const deserializeAws_json1_1AssociateKmsKeyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1CancelExportTaskCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1CancelExportTaskCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1CancelExportTaskCommand = deserializeAws_json1_1CancelExportTaskCommand;
+const deserializeAws_json1_1CancelExportTaskCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidOperationException":
+        case "com.amazonaws.cloudwatchlogs#InvalidOperationException":
+            throw await deserializeAws_json1_1InvalidOperationExceptionResponse(parsedOutput, context);
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1CreateExportTaskCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1CreateExportTaskCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1CreateExportTaskResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1CreateExportTaskCommand = deserializeAws_json1_1CreateExportTaskCommand;
+const deserializeAws_json1_1CreateExportTaskCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceAlreadyExistsException":
+        case "com.amazonaws.cloudwatchlogs#ResourceAlreadyExistsException":
+            throw await deserializeAws_json1_1ResourceAlreadyExistsExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1CreateLogGroupCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1CreateLogGroupCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1CreateLogGroupCommand = deserializeAws_json1_1CreateLogGroupCommand;
+const deserializeAws_json1_1CreateLogGroupCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceAlreadyExistsException":
+        case "com.amazonaws.cloudwatchlogs#ResourceAlreadyExistsException":
+            throw await deserializeAws_json1_1ResourceAlreadyExistsExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1CreateLogStreamCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1CreateLogStreamCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1CreateLogStreamCommand = deserializeAws_json1_1CreateLogStreamCommand;
+const deserializeAws_json1_1CreateLogStreamCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceAlreadyExistsException":
+        case "com.amazonaws.cloudwatchlogs#ResourceAlreadyExistsException":
+            throw await deserializeAws_json1_1ResourceAlreadyExistsExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteDataProtectionPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteDataProtectionPolicyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteDataProtectionPolicyCommand = deserializeAws_json1_1DeleteDataProtectionPolicyCommand;
+const deserializeAws_json1_1DeleteDataProtectionPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteDestinationCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteDestinationCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteDestinationCommand = deserializeAws_json1_1DeleteDestinationCommand;
+const deserializeAws_json1_1DeleteDestinationCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteLogGroupCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteLogGroupCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteLogGroupCommand = deserializeAws_json1_1DeleteLogGroupCommand;
+const deserializeAws_json1_1DeleteLogGroupCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteLogStreamCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteLogStreamCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteLogStreamCommand = deserializeAws_json1_1DeleteLogStreamCommand;
+const deserializeAws_json1_1DeleteLogStreamCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteMetricFilterCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteMetricFilterCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteMetricFilterCommand = deserializeAws_json1_1DeleteMetricFilterCommand;
+const deserializeAws_json1_1DeleteMetricFilterCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteQueryDefinitionCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteQueryDefinitionCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DeleteQueryDefinitionResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteQueryDefinitionCommand = deserializeAws_json1_1DeleteQueryDefinitionCommand;
+const deserializeAws_json1_1DeleteQueryDefinitionCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteResourcePolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteResourcePolicyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteResourcePolicyCommand = deserializeAws_json1_1DeleteResourcePolicyCommand;
+const deserializeAws_json1_1DeleteResourcePolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteRetentionPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteRetentionPolicyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteRetentionPolicyCommand = deserializeAws_json1_1DeleteRetentionPolicyCommand;
+const deserializeAws_json1_1DeleteRetentionPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DeleteSubscriptionFilterCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DeleteSubscriptionFilterCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DeleteSubscriptionFilterCommand = deserializeAws_json1_1DeleteSubscriptionFilterCommand;
+const deserializeAws_json1_1DeleteSubscriptionFilterCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeDestinationsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeDestinationsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeDestinationsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeDestinationsCommand = deserializeAws_json1_1DescribeDestinationsCommand;
+const deserializeAws_json1_1DescribeDestinationsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeExportTasksCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeExportTasksCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeExportTasksResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeExportTasksCommand = deserializeAws_json1_1DescribeExportTasksCommand;
+const deserializeAws_json1_1DescribeExportTasksCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeLogGroupsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeLogGroupsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeLogGroupsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeLogGroupsCommand = deserializeAws_json1_1DescribeLogGroupsCommand;
+const deserializeAws_json1_1DescribeLogGroupsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeLogStreamsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeLogStreamsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeLogStreamsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeLogStreamsCommand = deserializeAws_json1_1DescribeLogStreamsCommand;
+const deserializeAws_json1_1DescribeLogStreamsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeMetricFiltersCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeMetricFiltersCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeMetricFiltersResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeMetricFiltersCommand = deserializeAws_json1_1DescribeMetricFiltersCommand;
+const deserializeAws_json1_1DescribeMetricFiltersCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeQueriesCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeQueriesCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeQueriesResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeQueriesCommand = deserializeAws_json1_1DescribeQueriesCommand;
+const deserializeAws_json1_1DescribeQueriesCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeQueryDefinitionsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeQueryDefinitionsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeQueryDefinitionsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeQueryDefinitionsCommand = deserializeAws_json1_1DescribeQueryDefinitionsCommand;
+const deserializeAws_json1_1DescribeQueryDefinitionsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeResourcePoliciesCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeResourcePoliciesCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeResourcePoliciesResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeResourcePoliciesCommand = deserializeAws_json1_1DescribeResourcePoliciesCommand;
+const deserializeAws_json1_1DescribeResourcePoliciesCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DescribeSubscriptionFiltersCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DescribeSubscriptionFiltersCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1DescribeSubscriptionFiltersResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DescribeSubscriptionFiltersCommand = deserializeAws_json1_1DescribeSubscriptionFiltersCommand;
+const deserializeAws_json1_1DescribeSubscriptionFiltersCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DisassociateKmsKeyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1DisassociateKmsKeyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1DisassociateKmsKeyCommand = deserializeAws_json1_1DisassociateKmsKeyCommand;
+const deserializeAws_json1_1DisassociateKmsKeyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1FilterLogEventsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1FilterLogEventsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1FilterLogEventsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1FilterLogEventsCommand = deserializeAws_json1_1FilterLogEventsCommand;
+const deserializeAws_json1_1FilterLogEventsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1GetDataProtectionPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1GetDataProtectionPolicyCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1GetDataProtectionPolicyResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1GetDataProtectionPolicyCommand = deserializeAws_json1_1GetDataProtectionPolicyCommand;
+const deserializeAws_json1_1GetDataProtectionPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1GetLogEventsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1GetLogEventsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1GetLogEventsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1GetLogEventsCommand = deserializeAws_json1_1GetLogEventsCommand;
+const deserializeAws_json1_1GetLogEventsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1GetLogGroupFieldsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1GetLogGroupFieldsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1GetLogGroupFieldsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1GetLogGroupFieldsCommand = deserializeAws_json1_1GetLogGroupFieldsCommand;
+const deserializeAws_json1_1GetLogGroupFieldsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1GetLogRecordCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1GetLogRecordCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1GetLogRecordResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1GetLogRecordCommand = deserializeAws_json1_1GetLogRecordCommand;
+const deserializeAws_json1_1GetLogRecordCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1GetQueryResultsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1GetQueryResultsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1GetQueryResultsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1GetQueryResultsCommand = deserializeAws_json1_1GetQueryResultsCommand;
+const deserializeAws_json1_1GetQueryResultsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1ListTagsForResourceCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1ListTagsForResourceCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1ListTagsForResourceResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1ListTagsForResourceCommand = deserializeAws_json1_1ListTagsForResourceCommand;
+const deserializeAws_json1_1ListTagsForResourceCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1ListTagsLogGroupCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1ListTagsLogGroupCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1ListTagsLogGroupResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1ListTagsLogGroupCommand = deserializeAws_json1_1ListTagsLogGroupCommand;
+const deserializeAws_json1_1ListTagsLogGroupCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutDataProtectionPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutDataProtectionPolicyCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1PutDataProtectionPolicyResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutDataProtectionPolicyCommand = deserializeAws_json1_1PutDataProtectionPolicyCommand;
+const deserializeAws_json1_1PutDataProtectionPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutDestinationCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutDestinationCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1PutDestinationResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutDestinationCommand = deserializeAws_json1_1PutDestinationCommand;
+const deserializeAws_json1_1PutDestinationCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutDestinationPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutDestinationPolicyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutDestinationPolicyCommand = deserializeAws_json1_1PutDestinationPolicyCommand;
+const deserializeAws_json1_1PutDestinationPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutLogEventsCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutLogEventsCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1PutLogEventsResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutLogEventsCommand = deserializeAws_json1_1PutLogEventsCommand;
+const deserializeAws_json1_1PutLogEventsCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "DataAlreadyAcceptedException":
+        case "com.amazonaws.cloudwatchlogs#DataAlreadyAcceptedException":
+            throw await deserializeAws_json1_1DataAlreadyAcceptedExceptionResponse(parsedOutput, context);
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "InvalidSequenceTokenException":
+        case "com.amazonaws.cloudwatchlogs#InvalidSequenceTokenException":
+            throw await deserializeAws_json1_1InvalidSequenceTokenExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        case "UnrecognizedClientException":
+        case "com.amazonaws.cloudwatchlogs#UnrecognizedClientException":
+            throw await deserializeAws_json1_1UnrecognizedClientExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutMetricFilterCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutMetricFilterCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutMetricFilterCommand = deserializeAws_json1_1PutMetricFilterCommand;
+const deserializeAws_json1_1PutMetricFilterCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutQueryDefinitionCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutQueryDefinitionCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1PutQueryDefinitionResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutQueryDefinitionCommand = deserializeAws_json1_1PutQueryDefinitionCommand;
+const deserializeAws_json1_1PutQueryDefinitionCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutResourcePolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutResourcePolicyCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1PutResourcePolicyResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutResourcePolicyCommand = deserializeAws_json1_1PutResourcePolicyCommand;
+const deserializeAws_json1_1PutResourcePolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutRetentionPolicyCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutRetentionPolicyCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutRetentionPolicyCommand = deserializeAws_json1_1PutRetentionPolicyCommand;
+const deserializeAws_json1_1PutRetentionPolicyCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1PutSubscriptionFilterCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1PutSubscriptionFilterCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1PutSubscriptionFilterCommand = deserializeAws_json1_1PutSubscriptionFilterCommand;
+const deserializeAws_json1_1PutSubscriptionFilterCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "OperationAbortedException":
+        case "com.amazonaws.cloudwatchlogs#OperationAbortedException":
+            throw await deserializeAws_json1_1OperationAbortedExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1StartQueryCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1StartQueryCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1StartQueryResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1StartQueryCommand = deserializeAws_json1_1StartQueryCommand;
+const deserializeAws_json1_1StartQueryCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "LimitExceededException":
+        case "com.amazonaws.cloudwatchlogs#LimitExceededException":
+            throw await deserializeAws_json1_1LimitExceededExceptionResponse(parsedOutput, context);
+        case "MalformedQueryException":
+        case "com.amazonaws.cloudwatchlogs#MalformedQueryException":
+            throw await deserializeAws_json1_1MalformedQueryExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1StopQueryCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1StopQueryCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1StopQueryResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1StopQueryCommand = deserializeAws_json1_1StopQueryCommand;
+const deserializeAws_json1_1StopQueryCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1TagLogGroupCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1TagLogGroupCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1TagLogGroupCommand = deserializeAws_json1_1TagLogGroupCommand;
+const deserializeAws_json1_1TagLogGroupCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1TagResourceCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1TagResourceCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1TagResourceCommand = deserializeAws_json1_1TagResourceCommand;
+const deserializeAws_json1_1TagResourceCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        case "TooManyTagsException":
+        case "com.amazonaws.cloudwatchlogs#TooManyTagsException":
+            throw await deserializeAws_json1_1TooManyTagsExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1TestMetricFilterCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1TestMetricFilterCommandError(output, context);
+    }
+    const data = await parseBody(output.body, context);
+    let contents = {};
+    contents = deserializeAws_json1_1TestMetricFilterResponse(data, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+        ...contents,
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1TestMetricFilterCommand = deserializeAws_json1_1TestMetricFilterCommand;
+const deserializeAws_json1_1TestMetricFilterCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1UntagLogGroupCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1UntagLogGroupCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1UntagLogGroupCommand = deserializeAws_json1_1UntagLogGroupCommand;
+const deserializeAws_json1_1UntagLogGroupCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1UntagResourceCommand = async (output, context) => {
+    if (output.statusCode >= 300) {
+        return deserializeAws_json1_1UntagResourceCommandError(output, context);
+    }
+    await collectBody(output.body, context);
+    const response = {
+        $metadata: deserializeMetadata(output),
+    };
+    return Promise.resolve(response);
+};
+exports.deserializeAws_json1_1UntagResourceCommand = deserializeAws_json1_1UntagResourceCommand;
+const deserializeAws_json1_1UntagResourceCommandError = async (output, context) => {
+    const parsedOutput = {
+        ...output,
+        body: await parseErrorBody(output.body, context),
+    };
+    const errorCode = loadRestJsonErrorCode(output, parsedOutput.body);
+    switch (errorCode) {
+        case "InvalidParameterException":
+        case "com.amazonaws.cloudwatchlogs#InvalidParameterException":
+            throw await deserializeAws_json1_1InvalidParameterExceptionResponse(parsedOutput, context);
+        case "ResourceNotFoundException":
+        case "com.amazonaws.cloudwatchlogs#ResourceNotFoundException":
+            throw await deserializeAws_json1_1ResourceNotFoundExceptionResponse(parsedOutput, context);
+        case "ServiceUnavailableException":
+        case "com.amazonaws.cloudwatchlogs#ServiceUnavailableException":
+            throw await deserializeAws_json1_1ServiceUnavailableExceptionResponse(parsedOutput, context);
+        default:
+            const parsedBody = parsedOutput.body;
+            (0, smithy_client_1.throwDefaultError)({
+                output,
+                parsedBody,
+                exceptionCtor: CloudWatchLogsServiceException_1.CloudWatchLogsServiceException,
+                errorCode,
+            });
+    }
+};
+const deserializeAws_json1_1DataAlreadyAcceptedExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1DataAlreadyAcceptedException(body, context);
+    const exception = new models_0_1.DataAlreadyAcceptedException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1InvalidOperationExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1InvalidOperationException(body, context);
+    const exception = new models_0_1.InvalidOperationException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1InvalidParameterExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1InvalidParameterException(body, context);
+    const exception = new models_0_1.InvalidParameterException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1InvalidSequenceTokenExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1InvalidSequenceTokenException(body, context);
+    const exception = new models_0_1.InvalidSequenceTokenException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1LimitExceededExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1LimitExceededException(body, context);
+    const exception = new models_0_1.LimitExceededException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1MalformedQueryExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1MalformedQueryException(body, context);
+    const exception = new models_0_1.MalformedQueryException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1OperationAbortedExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1OperationAbortedException(body, context);
+    const exception = new models_0_1.OperationAbortedException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1ResourceAlreadyExistsExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1ResourceAlreadyExistsException(body, context);
+    const exception = new models_0_1.ResourceAlreadyExistsException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1ResourceNotFoundExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1ResourceNotFoundException(body, context);
+    const exception = new models_0_1.ResourceNotFoundException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1ServiceUnavailableExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1ServiceUnavailableException(body, context);
+    const exception = new models_0_1.ServiceUnavailableException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1TooManyTagsExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1TooManyTagsException(body, context);
+    const exception = new models_0_1.TooManyTagsException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const deserializeAws_json1_1UnrecognizedClientExceptionResponse = async (parsedOutput, context) => {
+    const body = parsedOutput.body;
+    const deserialized = deserializeAws_json1_1UnrecognizedClientException(body, context);
+    const exception = new models_0_1.UnrecognizedClientException({
+        $metadata: deserializeMetadata(parsedOutput),
+        ...deserialized,
+    });
+    return (0, smithy_client_1.decorateServiceException)(exception, body);
+};
+const serializeAws_json1_1AccountIds = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1AssociateKmsKeyRequest = (input, context) => {
+    return {
+        ...(input.kmsKeyId != null && { kmsKeyId: input.kmsKeyId }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1CancelExportTaskRequest = (input, context) => {
+    return {
+        ...(input.taskId != null && { taskId: input.taskId }),
+    };
+};
+const serializeAws_json1_1CreateExportTaskRequest = (input, context) => {
+    return {
+        ...(input.destination != null && { destination: input.destination }),
+        ...(input.destinationPrefix != null && { destinationPrefix: input.destinationPrefix }),
+        ...(input.from != null && { from: input.from }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamNamePrefix != null && { logStreamNamePrefix: input.logStreamNamePrefix }),
+        ...(input.taskName != null && { taskName: input.taskName }),
+        ...(input.to != null && { to: input.to }),
+    };
+};
+const serializeAws_json1_1CreateLogGroupRequest = (input, context) => {
+    return {
+        ...(input.kmsKeyId != null && { kmsKeyId: input.kmsKeyId }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.tags != null && { tags: serializeAws_json1_1Tags(input.tags, context) }),
+    };
+};
+const serializeAws_json1_1CreateLogStreamRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamName != null && { logStreamName: input.logStreamName }),
+    };
+};
+const serializeAws_json1_1DeleteDataProtectionPolicyRequest = (input, context) => {
+    return {
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+    };
+};
+const serializeAws_json1_1DeleteDestinationRequest = (input, context) => {
+    return {
+        ...(input.destinationName != null && { destinationName: input.destinationName }),
+    };
+};
+const serializeAws_json1_1DeleteLogGroupRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1DeleteLogStreamRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamName != null && { logStreamName: input.logStreamName }),
+    };
+};
+const serializeAws_json1_1DeleteMetricFilterRequest = (input, context) => {
+    return {
+        ...(input.filterName != null && { filterName: input.filterName }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1DeleteQueryDefinitionRequest = (input, context) => {
+    return {
+        ...(input.queryDefinitionId != null && { queryDefinitionId: input.queryDefinitionId }),
+    };
+};
+const serializeAws_json1_1DeleteResourcePolicyRequest = (input, context) => {
+    return {
+        ...(input.policyName != null && { policyName: input.policyName }),
+    };
+};
+const serializeAws_json1_1DeleteRetentionPolicyRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1DeleteSubscriptionFilterRequest = (input, context) => {
+    return {
+        ...(input.filterName != null && { filterName: input.filterName }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1DescribeDestinationsRequest = (input, context) => {
+    return {
+        ...(input.DestinationNamePrefix != null && { DestinationNamePrefix: input.DestinationNamePrefix }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+    };
+};
+const serializeAws_json1_1DescribeExportTasksRequest = (input, context) => {
+    return {
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.statusCode != null && { statusCode: input.statusCode }),
+        ...(input.taskId != null && { taskId: input.taskId }),
+    };
+};
+const serializeAws_json1_1DescribeLogGroupsRequest = (input, context) => {
+    return {
+        ...(input.accountIdentifiers != null && {
+            accountIdentifiers: serializeAws_json1_1AccountIds(input.accountIdentifiers, context),
+        }),
+        ...(input.includeLinkedAccounts != null && { includeLinkedAccounts: input.includeLinkedAccounts }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupNamePattern != null && { logGroupNamePattern: input.logGroupNamePattern }),
+        ...(input.logGroupNamePrefix != null && { logGroupNamePrefix: input.logGroupNamePrefix }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+    };
+};
+const serializeAws_json1_1DescribeLogStreamsRequest = (input, context) => {
+    return {
+        ...(input.descending != null && { descending: input.descending }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamNamePrefix != null && { logStreamNamePrefix: input.logStreamNamePrefix }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.orderBy != null && { orderBy: input.orderBy }),
+    };
+};
+const serializeAws_json1_1DescribeMetricFiltersRequest = (input, context) => {
+    return {
+        ...(input.filterNamePrefix != null && { filterNamePrefix: input.filterNamePrefix }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.metricName != null && { metricName: input.metricName }),
+        ...(input.metricNamespace != null && { metricNamespace: input.metricNamespace }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+    };
+};
+const serializeAws_json1_1DescribeQueriesRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.maxResults != null && { maxResults: input.maxResults }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.status != null && { status: input.status }),
+    };
+};
+const serializeAws_json1_1DescribeQueryDefinitionsRequest = (input, context) => {
+    return {
+        ...(input.maxResults != null && { maxResults: input.maxResults }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.queryDefinitionNamePrefix != null && { queryDefinitionNamePrefix: input.queryDefinitionNamePrefix }),
+    };
+};
+const serializeAws_json1_1DescribeResourcePoliciesRequest = (input, context) => {
+    return {
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+    };
+};
+const serializeAws_json1_1DescribeSubscriptionFiltersRequest = (input, context) => {
+    return {
+        ...(input.filterNamePrefix != null && { filterNamePrefix: input.filterNamePrefix }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+    };
+};
+const serializeAws_json1_1Dimensions = (input, context) => {
+    return Object.entries(input).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = value;
+        return acc;
+    }, {});
+};
+const serializeAws_json1_1DisassociateKmsKeyRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1FilterLogEventsRequest = (input, context) => {
+    return {
+        ...(input.endTime != null && { endTime: input.endTime }),
+        ...(input.filterPattern != null && { filterPattern: input.filterPattern }),
+        ...(input.interleaved != null && { interleaved: input.interleaved }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamNamePrefix != null && { logStreamNamePrefix: input.logStreamNamePrefix }),
+        ...(input.logStreamNames != null && {
+            logStreamNames: serializeAws_json1_1InputLogStreamNames(input.logStreamNames, context),
+        }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.startTime != null && { startTime: input.startTime }),
+        ...(input.unmask != null && { unmask: input.unmask }),
+    };
+};
+const serializeAws_json1_1GetDataProtectionPolicyRequest = (input, context) => {
+    return {
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+    };
+};
+const serializeAws_json1_1GetLogEventsRequest = (input, context) => {
+    return {
+        ...(input.endTime != null && { endTime: input.endTime }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamName != null && { logStreamName: input.logStreamName }),
+        ...(input.nextToken != null && { nextToken: input.nextToken }),
+        ...(input.startFromHead != null && { startFromHead: input.startFromHead }),
+        ...(input.startTime != null && { startTime: input.startTime }),
+        ...(input.unmask != null && { unmask: input.unmask }),
+    };
+};
+const serializeAws_json1_1GetLogGroupFieldsRequest = (input, context) => {
+    return {
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.time != null && { time: input.time }),
+    };
+};
+const serializeAws_json1_1GetLogRecordRequest = (input, context) => {
+    return {
+        ...(input.logRecordPointer != null && { logRecordPointer: input.logRecordPointer }),
+        ...(input.unmask != null && { unmask: input.unmask }),
+    };
+};
+const serializeAws_json1_1GetQueryResultsRequest = (input, context) => {
+    return {
+        ...(input.queryId != null && { queryId: input.queryId }),
+    };
+};
+const serializeAws_json1_1InputLogEvent = (input, context) => {
+    return {
+        ...(input.message != null && { message: input.message }),
+        ...(input.timestamp != null && { timestamp: input.timestamp }),
+    };
+};
+const serializeAws_json1_1InputLogEvents = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return serializeAws_json1_1InputLogEvent(entry, context);
+    });
+};
+const serializeAws_json1_1InputLogStreamNames = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1ListTagsForResourceRequest = (input, context) => {
+    return {
+        ...(input.resourceArn != null && { resourceArn: input.resourceArn }),
+    };
+};
+const serializeAws_json1_1ListTagsLogGroupRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+    };
+};
+const serializeAws_json1_1LogGroupIdentifiers = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1LogGroupNames = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1MetricTransformation = (input, context) => {
+    return {
+        ...(input.defaultValue != null && { defaultValue: (0, smithy_client_1.serializeFloat)(input.defaultValue) }),
+        ...(input.dimensions != null && { dimensions: serializeAws_json1_1Dimensions(input.dimensions, context) }),
+        ...(input.metricName != null && { metricName: input.metricName }),
+        ...(input.metricNamespace != null && { metricNamespace: input.metricNamespace }),
+        ...(input.metricValue != null && { metricValue: input.metricValue }),
+        ...(input.unit != null && { unit: input.unit }),
+    };
+};
+const serializeAws_json1_1MetricTransformations = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return serializeAws_json1_1MetricTransformation(entry, context);
+    });
+};
+const serializeAws_json1_1PutDataProtectionPolicyRequest = (input, context) => {
+    return {
+        ...(input.logGroupIdentifier != null && { logGroupIdentifier: input.logGroupIdentifier }),
+        ...(input.policyDocument != null && { policyDocument: input.policyDocument }),
+    };
+};
+const serializeAws_json1_1PutDestinationPolicyRequest = (input, context) => {
+    return {
+        ...(input.accessPolicy != null && { accessPolicy: input.accessPolicy }),
+        ...(input.destinationName != null && { destinationName: input.destinationName }),
+        ...(input.forceUpdate != null && { forceUpdate: input.forceUpdate }),
+    };
+};
+const serializeAws_json1_1PutDestinationRequest = (input, context) => {
+    return {
+        ...(input.destinationName != null && { destinationName: input.destinationName }),
+        ...(input.roleArn != null && { roleArn: input.roleArn }),
+        ...(input.tags != null && { tags: serializeAws_json1_1Tags(input.tags, context) }),
+        ...(input.targetArn != null && { targetArn: input.targetArn }),
+    };
+};
+const serializeAws_json1_1PutLogEventsRequest = (input, context) => {
+    return {
+        ...(input.logEvents != null && { logEvents: serializeAws_json1_1InputLogEvents(input.logEvents, context) }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logStreamName != null && { logStreamName: input.logStreamName }),
+        ...(input.sequenceToken != null && { sequenceToken: input.sequenceToken }),
+    };
+};
+const serializeAws_json1_1PutMetricFilterRequest = (input, context) => {
+    return {
+        ...(input.filterName != null && { filterName: input.filterName }),
+        ...(input.filterPattern != null && { filterPattern: input.filterPattern }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.metricTransformations != null && {
+            metricTransformations: serializeAws_json1_1MetricTransformations(input.metricTransformations, context),
+        }),
+    };
+};
+const serializeAws_json1_1PutQueryDefinitionRequest = (input, context) => {
+    return {
+        ...(input.logGroupNames != null && {
+            logGroupNames: serializeAws_json1_1LogGroupNames(input.logGroupNames, context),
+        }),
+        ...(input.name != null && { name: input.name }),
+        ...(input.queryDefinitionId != null && { queryDefinitionId: input.queryDefinitionId }),
+        ...(input.queryString != null && { queryString: input.queryString }),
+    };
+};
+const serializeAws_json1_1PutResourcePolicyRequest = (input, context) => {
+    return {
+        ...(input.policyDocument != null && { policyDocument: input.policyDocument }),
+        ...(input.policyName != null && { policyName: input.policyName }),
+    };
+};
+const serializeAws_json1_1PutRetentionPolicyRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.retentionInDays != null && { retentionInDays: input.retentionInDays }),
+    };
+};
+const serializeAws_json1_1PutSubscriptionFilterRequest = (input, context) => {
+    return {
+        ...(input.destinationArn != null && { destinationArn: input.destinationArn }),
+        ...(input.distribution != null && { distribution: input.distribution }),
+        ...(input.filterName != null && { filterName: input.filterName }),
+        ...(input.filterPattern != null && { filterPattern: input.filterPattern }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.roleArn != null && { roleArn: input.roleArn }),
+    };
+};
+const serializeAws_json1_1StartQueryRequest = (input, context) => {
+    return {
+        ...(input.endTime != null && { endTime: input.endTime }),
+        ...(input.limit != null && { limit: input.limit }),
+        ...(input.logGroupIdentifiers != null && {
+            logGroupIdentifiers: serializeAws_json1_1LogGroupIdentifiers(input.logGroupIdentifiers, context),
+        }),
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.logGroupNames != null && {
+            logGroupNames: serializeAws_json1_1LogGroupNames(input.logGroupNames, context),
+        }),
+        ...(input.queryString != null && { queryString: input.queryString }),
+        ...(input.startTime != null && { startTime: input.startTime }),
+    };
+};
+const serializeAws_json1_1StopQueryRequest = (input, context) => {
+    return {
+        ...(input.queryId != null && { queryId: input.queryId }),
+    };
+};
+const serializeAws_json1_1TagKeyList = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1TagList = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1TagLogGroupRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.tags != null && { tags: serializeAws_json1_1Tags(input.tags, context) }),
+    };
+};
+const serializeAws_json1_1TagResourceRequest = (input, context) => {
+    return {
+        ...(input.resourceArn != null && { resourceArn: input.resourceArn }),
+        ...(input.tags != null && { tags: serializeAws_json1_1Tags(input.tags, context) }),
+    };
+};
+const serializeAws_json1_1Tags = (input, context) => {
+    return Object.entries(input).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = value;
+        return acc;
+    }, {});
+};
+const serializeAws_json1_1TestEventMessages = (input, context) => {
+    return input
+        .filter((e) => e != null)
+        .map((entry) => {
+        return entry;
+    });
+};
+const serializeAws_json1_1TestMetricFilterRequest = (input, context) => {
+    return {
+        ...(input.filterPattern != null && { filterPattern: input.filterPattern }),
+        ...(input.logEventMessages != null && {
+            logEventMessages: serializeAws_json1_1TestEventMessages(input.logEventMessages, context),
+        }),
+    };
+};
+const serializeAws_json1_1UntagLogGroupRequest = (input, context) => {
+    return {
+        ...(input.logGroupName != null && { logGroupName: input.logGroupName }),
+        ...(input.tags != null && { tags: serializeAws_json1_1TagList(input.tags, context) }),
+    };
+};
+const serializeAws_json1_1UntagResourceRequest = (input, context) => {
+    return {
+        ...(input.resourceArn != null && { resourceArn: input.resourceArn }),
+        ...(input.tagKeys != null && { tagKeys: serializeAws_json1_1TagKeyList(input.tagKeys, context) }),
+    };
+};
+const deserializeAws_json1_1CreateExportTaskResponse = (output, context) => {
+    return {
+        taskId: (0, smithy_client_1.expectString)(output.taskId),
+    };
+};
+const deserializeAws_json1_1DataAlreadyAcceptedException = (output, context) => {
+    return {
+        expectedSequenceToken: (0, smithy_client_1.expectString)(output.expectedSequenceToken),
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1DeleteQueryDefinitionResponse = (output, context) => {
+    return {
+        success: (0, smithy_client_1.expectBoolean)(output.success),
+    };
+};
+const deserializeAws_json1_1DescribeDestinationsResponse = (output, context) => {
+    return {
+        destinations: output.destinations != null ? deserializeAws_json1_1Destinations(output.destinations, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+    };
+};
+const deserializeAws_json1_1DescribeExportTasksResponse = (output, context) => {
+    return {
+        exportTasks: output.exportTasks != null ? deserializeAws_json1_1ExportTasks(output.exportTasks, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+    };
+};
+const deserializeAws_json1_1DescribeLogGroupsResponse = (output, context) => {
+    return {
+        logGroups: output.logGroups != null ? deserializeAws_json1_1LogGroups(output.logGroups, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+    };
+};
+const deserializeAws_json1_1DescribeLogStreamsResponse = (output, context) => {
+    return {
+        logStreams: output.logStreams != null ? deserializeAws_json1_1LogStreams(output.logStreams, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+    };
+};
+const deserializeAws_json1_1DescribeMetricFiltersResponse = (output, context) => {
+    return {
+        metricFilters: output.metricFilters != null ? deserializeAws_json1_1MetricFilters(output.metricFilters, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+    };
+};
+const deserializeAws_json1_1DescribeQueriesResponse = (output, context) => {
+    return {
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+        queries: output.queries != null ? deserializeAws_json1_1QueryInfoList(output.queries, context) : undefined,
+    };
+};
+const deserializeAws_json1_1DescribeQueryDefinitionsResponse = (output, context) => {
+    return {
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+        queryDefinitions: output.queryDefinitions != null
+            ? deserializeAws_json1_1QueryDefinitionList(output.queryDefinitions, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1DescribeResourcePoliciesResponse = (output, context) => {
+    return {
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+        resourcePolicies: output.resourcePolicies != null
+            ? deserializeAws_json1_1ResourcePolicies(output.resourcePolicies, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1DescribeSubscriptionFiltersResponse = (output, context) => {
+    return {
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+        subscriptionFilters: output.subscriptionFilters != null
+            ? deserializeAws_json1_1SubscriptionFilters(output.subscriptionFilters, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1Destination = (output, context) => {
+    return {
+        accessPolicy: (0, smithy_client_1.expectString)(output.accessPolicy),
+        arn: (0, smithy_client_1.expectString)(output.arn),
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+        destinationName: (0, smithy_client_1.expectString)(output.destinationName),
+        roleArn: (0, smithy_client_1.expectString)(output.roleArn),
+        targetArn: (0, smithy_client_1.expectString)(output.targetArn),
+    };
+};
+const deserializeAws_json1_1Destinations = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1Destination(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1Dimensions = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = (0, smithy_client_1.expectString)(value);
+        return acc;
+    }, {});
+};
+const deserializeAws_json1_1ExportTask = (output, context) => {
+    return {
+        destination: (0, smithy_client_1.expectString)(output.destination),
+        destinationPrefix: (0, smithy_client_1.expectString)(output.destinationPrefix),
+        executionInfo: output.executionInfo != null
+            ? deserializeAws_json1_1ExportTaskExecutionInfo(output.executionInfo, context)
+            : undefined,
+        from: (0, smithy_client_1.expectLong)(output.from),
+        logGroupName: (0, smithy_client_1.expectString)(output.logGroupName),
+        status: output.status != null ? deserializeAws_json1_1ExportTaskStatus(output.status, context) : undefined,
+        taskId: (0, smithy_client_1.expectString)(output.taskId),
+        taskName: (0, smithy_client_1.expectString)(output.taskName),
+        to: (0, smithy_client_1.expectLong)(output.to),
+    };
+};
+const deserializeAws_json1_1ExportTaskExecutionInfo = (output, context) => {
+    return {
+        completionTime: (0, smithy_client_1.expectLong)(output.completionTime),
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+    };
+};
+const deserializeAws_json1_1ExportTasks = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1ExportTask(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1ExportTaskStatus = (output, context) => {
+    return {
+        code: (0, smithy_client_1.expectString)(output.code),
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1ExtractedValues = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = (0, smithy_client_1.expectString)(value);
+        return acc;
+    }, {});
+};
+const deserializeAws_json1_1FilteredLogEvent = (output, context) => {
+    return {
+        eventId: (0, smithy_client_1.expectString)(output.eventId),
+        ingestionTime: (0, smithy_client_1.expectLong)(output.ingestionTime),
+        logStreamName: (0, smithy_client_1.expectString)(output.logStreamName),
+        message: (0, smithy_client_1.expectString)(output.message),
+        timestamp: (0, smithy_client_1.expectLong)(output.timestamp),
+    };
+};
+const deserializeAws_json1_1FilteredLogEvents = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1FilteredLogEvent(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1FilterLogEventsResponse = (output, context) => {
+    return {
+        events: output.events != null ? deserializeAws_json1_1FilteredLogEvents(output.events, context) : undefined,
+        nextToken: (0, smithy_client_1.expectString)(output.nextToken),
+        searchedLogStreams: output.searchedLogStreams != null
+            ? deserializeAws_json1_1SearchedLogStreams(output.searchedLogStreams, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1GetDataProtectionPolicyResponse = (output, context) => {
+    return {
+        lastUpdatedTime: (0, smithy_client_1.expectLong)(output.lastUpdatedTime),
+        logGroupIdentifier: (0, smithy_client_1.expectString)(output.logGroupIdentifier),
+        policyDocument: (0, smithy_client_1.expectString)(output.policyDocument),
+    };
+};
+const deserializeAws_json1_1GetLogEventsResponse = (output, context) => {
+    return {
+        events: output.events != null ? deserializeAws_json1_1OutputLogEvents(output.events, context) : undefined,
+        nextBackwardToken: (0, smithy_client_1.expectString)(output.nextBackwardToken),
+        nextForwardToken: (0, smithy_client_1.expectString)(output.nextForwardToken),
+    };
+};
+const deserializeAws_json1_1GetLogGroupFieldsResponse = (output, context) => {
+    return {
+        logGroupFields: output.logGroupFields != null
+            ? deserializeAws_json1_1LogGroupFieldList(output.logGroupFields, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1GetLogRecordResponse = (output, context) => {
+    return {
+        logRecord: output.logRecord != null ? deserializeAws_json1_1LogRecord(output.logRecord, context) : undefined,
+    };
+};
+const deserializeAws_json1_1GetQueryResultsResponse = (output, context) => {
+    return {
+        results: output.results != null ? deserializeAws_json1_1QueryResults(output.results, context) : undefined,
+        statistics: output.statistics != null ? deserializeAws_json1_1QueryStatistics(output.statistics, context) : undefined,
+        status: (0, smithy_client_1.expectString)(output.status),
+    };
+};
+const deserializeAws_json1_1InvalidOperationException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1InvalidParameterException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1InvalidSequenceTokenException = (output, context) => {
+    return {
+        expectedSequenceToken: (0, smithy_client_1.expectString)(output.expectedSequenceToken),
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1LimitExceededException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1ListTagsForResourceResponse = (output, context) => {
+    return {
+        tags: output.tags != null ? deserializeAws_json1_1Tags(output.tags, context) : undefined,
+    };
+};
+const deserializeAws_json1_1ListTagsLogGroupResponse = (output, context) => {
+    return {
+        tags: output.tags != null ? deserializeAws_json1_1Tags(output.tags, context) : undefined,
+    };
+};
+const deserializeAws_json1_1LogGroup = (output, context) => {
+    return {
+        arn: (0, smithy_client_1.expectString)(output.arn),
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+        dataProtectionStatus: (0, smithy_client_1.expectString)(output.dataProtectionStatus),
+        kmsKeyId: (0, smithy_client_1.expectString)(output.kmsKeyId),
+        logGroupName: (0, smithy_client_1.expectString)(output.logGroupName),
+        metricFilterCount: (0, smithy_client_1.expectInt32)(output.metricFilterCount),
+        retentionInDays: (0, smithy_client_1.expectInt32)(output.retentionInDays),
+        storedBytes: (0, smithy_client_1.expectLong)(output.storedBytes),
+    };
+};
+const deserializeAws_json1_1LogGroupField = (output, context) => {
+    return {
+        name: (0, smithy_client_1.expectString)(output.name),
+        percent: (0, smithy_client_1.expectInt32)(output.percent),
+    };
+};
+const deserializeAws_json1_1LogGroupFieldList = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1LogGroupField(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1LogGroupNames = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return (0, smithy_client_1.expectString)(entry);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1LogGroups = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1LogGroup(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1LogRecord = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = (0, smithy_client_1.expectString)(value);
+        return acc;
+    }, {});
+};
+const deserializeAws_json1_1LogStream = (output, context) => {
+    return {
+        arn: (0, smithy_client_1.expectString)(output.arn),
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+        firstEventTimestamp: (0, smithy_client_1.expectLong)(output.firstEventTimestamp),
+        lastEventTimestamp: (0, smithy_client_1.expectLong)(output.lastEventTimestamp),
+        lastIngestionTime: (0, smithy_client_1.expectLong)(output.lastIngestionTime),
+        logStreamName: (0, smithy_client_1.expectString)(output.logStreamName),
+        storedBytes: (0, smithy_client_1.expectLong)(output.storedBytes),
+        uploadSequenceToken: (0, smithy_client_1.expectString)(output.uploadSequenceToken),
+    };
+};
+const deserializeAws_json1_1LogStreams = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1LogStream(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1MalformedQueryException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+        queryCompileError: output.queryCompileError != null
+            ? deserializeAws_json1_1QueryCompileError(output.queryCompileError, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1MetricFilter = (output, context) => {
+    return {
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+        filterName: (0, smithy_client_1.expectString)(output.filterName),
+        filterPattern: (0, smithy_client_1.expectString)(output.filterPattern),
+        logGroupName: (0, smithy_client_1.expectString)(output.logGroupName),
+        metricTransformations: output.metricTransformations != null
+            ? deserializeAws_json1_1MetricTransformations(output.metricTransformations, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1MetricFilterMatches = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1MetricFilterMatchRecord(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1MetricFilterMatchRecord = (output, context) => {
+    return {
+        eventMessage: (0, smithy_client_1.expectString)(output.eventMessage),
+        eventNumber: (0, smithy_client_1.expectLong)(output.eventNumber),
+        extractedValues: output.extractedValues != null
+            ? deserializeAws_json1_1ExtractedValues(output.extractedValues, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1MetricFilters = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1MetricFilter(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1MetricTransformation = (output, context) => {
+    return {
+        defaultValue: (0, smithy_client_1.limitedParseDouble)(output.defaultValue),
+        dimensions: output.dimensions != null ? deserializeAws_json1_1Dimensions(output.dimensions, context) : undefined,
+        metricName: (0, smithy_client_1.expectString)(output.metricName),
+        metricNamespace: (0, smithy_client_1.expectString)(output.metricNamespace),
+        metricValue: (0, smithy_client_1.expectString)(output.metricValue),
+        unit: (0, smithy_client_1.expectString)(output.unit),
+    };
+};
+const deserializeAws_json1_1MetricTransformations = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1MetricTransformation(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1OperationAbortedException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1OutputLogEvent = (output, context) => {
+    return {
+        ingestionTime: (0, smithy_client_1.expectLong)(output.ingestionTime),
+        message: (0, smithy_client_1.expectString)(output.message),
+        timestamp: (0, smithy_client_1.expectLong)(output.timestamp),
+    };
+};
+const deserializeAws_json1_1OutputLogEvents = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1OutputLogEvent(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1PutDataProtectionPolicyResponse = (output, context) => {
+    return {
+        lastUpdatedTime: (0, smithy_client_1.expectLong)(output.lastUpdatedTime),
+        logGroupIdentifier: (0, smithy_client_1.expectString)(output.logGroupIdentifier),
+        policyDocument: (0, smithy_client_1.expectString)(output.policyDocument),
+    };
+};
+const deserializeAws_json1_1PutDestinationResponse = (output, context) => {
+    return {
+        destination: output.destination != null ? deserializeAws_json1_1Destination(output.destination, context) : undefined,
+    };
+};
+const deserializeAws_json1_1PutLogEventsResponse = (output, context) => {
+    return {
+        nextSequenceToken: (0, smithy_client_1.expectString)(output.nextSequenceToken),
+        rejectedLogEventsInfo: output.rejectedLogEventsInfo != null
+            ? deserializeAws_json1_1RejectedLogEventsInfo(output.rejectedLogEventsInfo, context)
+            : undefined,
+    };
+};
+const deserializeAws_json1_1PutQueryDefinitionResponse = (output, context) => {
+    return {
+        queryDefinitionId: (0, smithy_client_1.expectString)(output.queryDefinitionId),
+    };
+};
+const deserializeAws_json1_1PutResourcePolicyResponse = (output, context) => {
+    return {
+        resourcePolicy: output.resourcePolicy != null ? deserializeAws_json1_1ResourcePolicy(output.resourcePolicy, context) : undefined,
+    };
+};
+const deserializeAws_json1_1QueryCompileError = (output, context) => {
+    return {
+        location: output.location != null ? deserializeAws_json1_1QueryCompileErrorLocation(output.location, context) : undefined,
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1QueryCompileErrorLocation = (output, context) => {
+    return {
+        endCharOffset: (0, smithy_client_1.expectInt32)(output.endCharOffset),
+        startCharOffset: (0, smithy_client_1.expectInt32)(output.startCharOffset),
+    };
+};
+const deserializeAws_json1_1QueryDefinition = (output, context) => {
+    return {
+        lastModified: (0, smithy_client_1.expectLong)(output.lastModified),
+        logGroupNames: output.logGroupNames != null ? deserializeAws_json1_1LogGroupNames(output.logGroupNames, context) : undefined,
+        name: (0, smithy_client_1.expectString)(output.name),
+        queryDefinitionId: (0, smithy_client_1.expectString)(output.queryDefinitionId),
+        queryString: (0, smithy_client_1.expectString)(output.queryString),
+    };
+};
+const deserializeAws_json1_1QueryDefinitionList = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1QueryDefinition(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1QueryInfo = (output, context) => {
+    return {
+        createTime: (0, smithy_client_1.expectLong)(output.createTime),
+        logGroupName: (0, smithy_client_1.expectString)(output.logGroupName),
+        queryId: (0, smithy_client_1.expectString)(output.queryId),
+        queryString: (0, smithy_client_1.expectString)(output.queryString),
+        status: (0, smithy_client_1.expectString)(output.status),
+    };
+};
+const deserializeAws_json1_1QueryInfoList = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1QueryInfo(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1QueryResults = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1ResultRows(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1QueryStatistics = (output, context) => {
+    return {
+        bytesScanned: (0, smithy_client_1.limitedParseDouble)(output.bytesScanned),
+        recordsMatched: (0, smithy_client_1.limitedParseDouble)(output.recordsMatched),
+        recordsScanned: (0, smithy_client_1.limitedParseDouble)(output.recordsScanned),
+    };
+};
+const deserializeAws_json1_1RejectedLogEventsInfo = (output, context) => {
+    return {
+        expiredLogEventEndIndex: (0, smithy_client_1.expectInt32)(output.expiredLogEventEndIndex),
+        tooNewLogEventStartIndex: (0, smithy_client_1.expectInt32)(output.tooNewLogEventStartIndex),
+        tooOldLogEventEndIndex: (0, smithy_client_1.expectInt32)(output.tooOldLogEventEndIndex),
+    };
+};
+const deserializeAws_json1_1ResourceAlreadyExistsException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1ResourceNotFoundException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1ResourcePolicies = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1ResourcePolicy(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1ResourcePolicy = (output, context) => {
+    return {
+        lastUpdatedTime: (0, smithy_client_1.expectLong)(output.lastUpdatedTime),
+        policyDocument: (0, smithy_client_1.expectString)(output.policyDocument),
+        policyName: (0, smithy_client_1.expectString)(output.policyName),
+    };
+};
+const deserializeAws_json1_1ResultField = (output, context) => {
+    return {
+        field: (0, smithy_client_1.expectString)(output.field),
+        value: (0, smithy_client_1.expectString)(output.value),
+    };
+};
+const deserializeAws_json1_1ResultRows = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1ResultField(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1SearchedLogStream = (output, context) => {
+    return {
+        logStreamName: (0, smithy_client_1.expectString)(output.logStreamName),
+        searchedCompletely: (0, smithy_client_1.expectBoolean)(output.searchedCompletely),
+    };
+};
+const deserializeAws_json1_1SearchedLogStreams = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1SearchedLogStream(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1ServiceUnavailableException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeAws_json1_1StartQueryResponse = (output, context) => {
+    return {
+        queryId: (0, smithy_client_1.expectString)(output.queryId),
+    };
+};
+const deserializeAws_json1_1StopQueryResponse = (output, context) => {
+    return {
+        success: (0, smithy_client_1.expectBoolean)(output.success),
+    };
+};
+const deserializeAws_json1_1SubscriptionFilter = (output, context) => {
+    return {
+        creationTime: (0, smithy_client_1.expectLong)(output.creationTime),
+        destinationArn: (0, smithy_client_1.expectString)(output.destinationArn),
+        distribution: (0, smithy_client_1.expectString)(output.distribution),
+        filterName: (0, smithy_client_1.expectString)(output.filterName),
+        filterPattern: (0, smithy_client_1.expectString)(output.filterPattern),
+        logGroupName: (0, smithy_client_1.expectString)(output.logGroupName),
+        roleArn: (0, smithy_client_1.expectString)(output.roleArn),
+    };
+};
+const deserializeAws_json1_1SubscriptionFilters = (output, context) => {
+    const retVal = (output || [])
+        .filter((e) => e != null)
+        .map((entry) => {
+        if (entry === null) {
+            return null;
+        }
+        return deserializeAws_json1_1SubscriptionFilter(entry, context);
+    });
+    return retVal;
+};
+const deserializeAws_json1_1Tags = (output, context) => {
+    return Object.entries(output).reduce((acc, [key, value]) => {
+        if (value === null) {
+            return acc;
+        }
+        acc[key] = (0, smithy_client_1.expectString)(value);
+        return acc;
+    }, {});
+};
+const deserializeAws_json1_1TestMetricFilterResponse = (output, context) => {
+    return {
+        matches: output.matches != null ? deserializeAws_json1_1MetricFilterMatches(output.matches, context) : undefined,
+    };
+};
+const deserializeAws_json1_1TooManyTagsException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+        resourceName: (0, smithy_client_1.expectString)(output.resourceName),
+    };
+};
+const deserializeAws_json1_1UnrecognizedClientException = (output, context) => {
+    return {
+        message: (0, smithy_client_1.expectString)(output.message),
+    };
+};
+const deserializeMetadata = (output) => ({
+    httpStatusCode: output.statusCode,
+    requestId: output.headers["x-amzn-requestid"] ?? output.headers["x-amzn-request-id"] ?? output.headers["x-amz-request-id"],
+    extendedRequestId: output.headers["x-amz-id-2"],
+    cfId: output.headers["x-amz-cf-id"],
+});
+const collectBody = (streamBody = new Uint8Array(), context) => {
+    if (streamBody instanceof Uint8Array) {
+        return Promise.resolve(streamBody);
+    }
+    return context.streamCollector(streamBody) || Promise.resolve(new Uint8Array());
+};
+const collectBodyString = (streamBody, context) => collectBody(streamBody, context).then((body) => context.utf8Encoder(body));
+const buildHttpRpcRequest = async (context, headers, path, resolvedHostname, body) => {
+    const { hostname, protocol = "https", port, path: basePath } = await context.endpoint();
+    const contents = {
+        protocol,
+        hostname,
+        port,
+        method: "POST",
+        path: basePath.endsWith("/") ? basePath.slice(0, -1) + path : basePath + path,
+        headers,
+    };
+    if (resolvedHostname !== undefined) {
+        contents.hostname = resolvedHostname;
+    }
+    if (body !== undefined) {
+        contents.body = body;
+    }
+    return new protocol_http_1.HttpRequest(contents);
+};
+const parseBody = (streamBody, context) => collectBodyString(streamBody, context).then((encoded) => {
+    if (encoded.length) {
+        return JSON.parse(encoded);
+    }
+    return {};
+});
+const parseErrorBody = async (errorBody, context) => {
+    const value = await parseBody(errorBody, context);
+    value.message = value.message ?? value.Message;
+    return value;
+};
+const loadRestJsonErrorCode = (output, data) => {
+    const findKey = (object, key) => Object.keys(object).find((k) => k.toLowerCase() === key.toLowerCase());
+    const sanitizeErrorCode = (rawValue) => {
+        let cleanValue = rawValue;
+        if (typeof cleanValue === "number") {
+            cleanValue = cleanValue.toString();
+        }
+        if (cleanValue.indexOf(",") >= 0) {
+            cleanValue = cleanValue.split(",")[0];
+        }
+        if (cleanValue.indexOf(":") >= 0) {
+            cleanValue = cleanValue.split(":")[0];
+        }
+        if (cleanValue.indexOf("#") >= 0) {
+            cleanValue = cleanValue.split("#")[1];
+        }
+        return cleanValue;
+    };
+    const headerKey = findKey(output.headers, "x-amzn-errortype");
+    if (headerKey !== undefined) {
+        return sanitizeErrorCode(output.headers[headerKey]);
+    }
+    if (data.code !== undefined) {
+        return sanitizeErrorCode(data.code);
+    }
+    if (data["__type"] !== undefined) {
+        return sanitizeErrorCode(data["__type"]);
+    }
+};
+
+
+/***/ }),
+
+/***/ 29879:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getRuntimeConfig = void 0;
+const tslib_1 = __nccwpck_require__(4351);
+const package_json_1 = tslib_1.__importDefault(__nccwpck_require__(62001));
+const client_sts_1 = __nccwpck_require__(52209);
+const config_resolver_1 = __nccwpck_require__(56153);
+const credential_provider_node_1 = __nccwpck_require__(75531);
+const hash_node_1 = __nccwpck_require__(97442);
+const middleware_retry_1 = __nccwpck_require__(96064);
+const node_config_provider_1 = __nccwpck_require__(87684);
+const node_http_handler_1 = __nccwpck_require__(68805);
+const util_body_length_node_1 = __nccwpck_require__(74147);
+const util_retry_1 = __nccwpck_require__(99395);
+const util_user_agent_node_1 = __nccwpck_require__(98095);
+const util_utf8_node_1 = __nccwpck_require__(66278);
+const runtimeConfig_shared_1 = __nccwpck_require__(89485);
+const smithy_client_1 = __nccwpck_require__(4963);
+const util_defaults_mode_node_1 = __nccwpck_require__(74243);
+const smithy_client_2 = __nccwpck_require__(4963);
+const getRuntimeConfig = (config) => {
+    (0, smithy_client_2.emitWarningIfUnsupportedVersion)(process.version);
+    const defaultsMode = (0, util_defaults_mode_node_1.resolveDefaultsModeConfig)(config);
+    const defaultConfigProvider = () => defaultsMode().then(smithy_client_1.loadConfigsForDefaultMode);
+    const clientSharedValues = (0, runtimeConfig_shared_1.getRuntimeConfig)(config);
+    return {
+        ...clientSharedValues,
+        ...config,
+        runtime: "node",
+        defaultsMode,
+        bodyLengthChecker: config?.bodyLengthChecker ?? util_body_length_node_1.calculateBodyLength,
+        credentialDefaultProvider: config?.credentialDefaultProvider ?? (0, client_sts_1.decorateDefaultCredentialProvider)(credential_provider_node_1.defaultProvider),
+        defaultUserAgentProvider: config?.defaultUserAgentProvider ??
+            (0, util_user_agent_node_1.defaultUserAgent)({ serviceId: clientSharedValues.serviceId, clientVersion: package_json_1.default.version }),
+        maxAttempts: config?.maxAttempts ?? (0, node_config_provider_1.loadConfig)(middleware_retry_1.NODE_MAX_ATTEMPT_CONFIG_OPTIONS),
+        region: config?.region ?? (0, node_config_provider_1.loadConfig)(config_resolver_1.NODE_REGION_CONFIG_OPTIONS, config_resolver_1.NODE_REGION_CONFIG_FILE_OPTIONS),
+        requestHandler: config?.requestHandler ?? new node_http_handler_1.NodeHttpHandler(defaultConfigProvider),
+        retryMode: config?.retryMode ??
+            (0, node_config_provider_1.loadConfig)({
+                ...middleware_retry_1.NODE_RETRY_MODE_CONFIG_OPTIONS,
+                default: async () => (await defaultConfigProvider()).retryMode || util_retry_1.DEFAULT_RETRY_MODE,
+            }),
+        sha256: config?.sha256 ?? hash_node_1.Hash.bind(null, "sha256"),
+        streamCollector: config?.streamCollector ?? node_http_handler_1.streamCollector,
+        useDualstackEndpoint: config?.useDualstackEndpoint ?? (0, node_config_provider_1.loadConfig)(config_resolver_1.NODE_USE_DUALSTACK_ENDPOINT_CONFIG_OPTIONS),
+        useFipsEndpoint: config?.useFipsEndpoint ?? (0, node_config_provider_1.loadConfig)(config_resolver_1.NODE_USE_FIPS_ENDPOINT_CONFIG_OPTIONS),
+        utf8Decoder: config?.utf8Decoder ?? util_utf8_node_1.fromUtf8,
+        utf8Encoder: config?.utf8Encoder ?? util_utf8_node_1.toUtf8,
+    };
+};
+exports.getRuntimeConfig = getRuntimeConfig;
+
+
+/***/ }),
+
+/***/ 89485:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getRuntimeConfig = void 0;
+const smithy_client_1 = __nccwpck_require__(4963);
+const url_parser_1 = __nccwpck_require__(2992);
+const util_base64_1 = __nccwpck_require__(97727);
+const endpointResolver_1 = __nccwpck_require__(49488);
+const getRuntimeConfig = (config) => ({
+    apiVersion: "2014-03-28",
+    base64Decoder: config?.base64Decoder ?? util_base64_1.fromBase64,
+    base64Encoder: config?.base64Encoder ?? util_base64_1.toBase64,
+    disableHostPrefix: config?.disableHostPrefix ?? false,
+    endpointProvider: config?.endpointProvider ?? endpointResolver_1.defaultEndpointResolver,
+    logger: config?.logger ?? new smithy_client_1.NoOpLogger(),
+    serviceId: config?.serviceId ?? "CloudWatch Logs",
+    urlParser: config?.urlParser ?? url_parser_1.parseUrl,
+});
+exports.getRuntimeConfig = getRuntimeConfig;
+
 
 /***/ }),
 
@@ -45841,7 +54141,7 @@ exports.composeNode = composeNode;
 
 var Node = __nccwpck_require__(41399);
 var Scalar = __nccwpck_require__(9338);
-var resolveBlockScalar = __nccwpck_require__(89485);
+var resolveBlockScalar = __nccwpck_require__(7521);
 var resolveFlowScalar = __nccwpck_require__(97578);
 
 function composeScalar(ctx, token, tagToken, onError) {
@@ -46272,7 +54572,7 @@ exports.resolveBlockMap = resolveBlockMap;
 
 /***/ }),
 
-/***/ 89485:
+/***/ 7521:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -49035,7 +57335,7 @@ exports.toJS = toJS;
 "use strict";
 
 
-var resolveBlockScalar = __nccwpck_require__(89485);
+var resolveBlockScalar = __nccwpck_require__(7521);
 var resolveFlowScalar = __nccwpck_require__(97578);
 var errors = __nccwpck_require__(14236);
 var stringifyString = __nccwpck_require__(46226);
@@ -53933,6 +62233,14 @@ function replaceNode(key, path, node) {
 exports.visit = visit;
 exports.visitAsync = visitAsync;
 
+
+/***/ }),
+
+/***/ 62001:
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('{"name":"@aws-sdk/client-cloudwatch-logs","description":"AWS SDK for JavaScript Cloudwatch Logs Client for Node.js, Browser and React Native","version":"3.241.0","scripts":{"build":"concurrently \'yarn:build:cjs\' \'yarn:build:es\' \'yarn:build:types\'","build:cjs":"tsc -p tsconfig.cjs.json","build:docs":"typedoc","build:es":"tsc -p tsconfig.es.json","build:include:deps":"lerna run --scope $npm_package_name --include-dependencies build","build:types":"tsc -p tsconfig.types.json","build:types:downlevel":"downlevel-dts dist-types dist-types/ts3.4","clean":"rimraf ./dist-* && rimraf *.tsbuildinfo","generate:client":"(cd ../../ && yarn generate-clients -g ./codegen/sdk-codegen/aws-models/cloudwatch-logs.json --keepFiles)"},"main":"./dist-cjs/index.js","types":"./dist-types/index.d.ts","module":"./dist-es/index.js","sideEffects":false,"dependencies":{"@aws-crypto/sha256-browser":"2.0.0","@aws-crypto/sha256-js":"2.0.0","@aws-sdk/client-sts":"3.241.0","@aws-sdk/config-resolver":"3.234.0","@aws-sdk/credential-provider-node":"3.241.0","@aws-sdk/fetch-http-handler":"3.226.0","@aws-sdk/hash-node":"3.226.0","@aws-sdk/invalid-dependency":"3.226.0","@aws-sdk/middleware-content-length":"3.226.0","@aws-sdk/middleware-endpoint":"3.226.0","@aws-sdk/middleware-host-header":"3.226.0","@aws-sdk/middleware-logger":"3.226.0","@aws-sdk/middleware-recursion-detection":"3.226.0","@aws-sdk/middleware-retry":"3.235.0","@aws-sdk/middleware-serde":"3.226.0","@aws-sdk/middleware-signing":"3.226.0","@aws-sdk/middleware-stack":"3.226.0","@aws-sdk/middleware-user-agent":"3.226.0","@aws-sdk/node-config-provider":"3.226.0","@aws-sdk/node-http-handler":"3.226.0","@aws-sdk/protocol-http":"3.226.0","@aws-sdk/smithy-client":"3.234.0","@aws-sdk/types":"3.226.0","@aws-sdk/url-parser":"3.226.0","@aws-sdk/util-base64":"3.208.0","@aws-sdk/util-body-length-browser":"3.188.0","@aws-sdk/util-body-length-node":"3.208.0","@aws-sdk/util-defaults-mode-browser":"3.234.0","@aws-sdk/util-defaults-mode-node":"3.234.0","@aws-sdk/util-endpoints":"3.241.0","@aws-sdk/util-retry":"3.229.0","@aws-sdk/util-user-agent-browser":"3.226.0","@aws-sdk/util-user-agent-node":"3.226.0","@aws-sdk/util-utf8-browser":"3.188.0","@aws-sdk/util-utf8-node":"3.208.0","tslib":"^2.3.1"},"devDependencies":{"@aws-sdk/service-client-documentation-generator":"3.208.0","@tsconfig/node14":"1.0.3","@types/node":"^14.14.31","concurrently":"7.0.0","downlevel-dts":"0.10.1","rimraf":"3.0.2","typedoc":"0.19.2","typescript":"~4.6.2"},"overrides":{"typedoc":{"typescript":"~4.6.2"}},"engines":{"node":">=14.0.0"},"typesVersions":{"<4.0":{"dist-types/*":["dist-types/ts3.4/*"]}},"files":["dist-*"],"author":{"name":"AWS SDK for JavaScript Team","url":"https://aws.amazon.com/javascript/"},"license":"Apache-2.0","browser":{"./dist-es/runtimeConfig":"./dist-es/runtimeConfig.browser"},"react-native":{"./dist-es/runtimeConfig":"./dist-es/runtimeConfig.native"},"homepage":"https://github.com/aws/aws-sdk-js-v3/tree/main/clients/client-cloudwatch-logs","repository":{"type":"git","url":"https://github.com/aws/aws-sdk-js-v3.git","directory":"clients/client-cloudwatch-logs"}}');
 
 /***/ }),
 
