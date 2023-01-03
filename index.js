@@ -372,6 +372,7 @@ async function run() {
           startFromHead: true
         }
         core.info(`Getting log events from CloudWatch...`+JSON.stringify(logParams, undefined, 4))
+        core.info(`task...`+JSON.stringify(task, undefined, 4))
         const logEvents = await cloudwatch.send(new GetLogEventsCommand(logParams));
         core.info(`Pre-deploy task output: `);
         logEvents.events.forEach(event => {
