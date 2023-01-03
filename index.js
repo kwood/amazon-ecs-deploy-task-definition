@@ -366,7 +366,7 @@ async function run() {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
         }
         // get log messages
-        const logEvents = await cloudwatch.send(GetLogEventsCommand({
+        const logEvents = await cloudwatch.send(new GetLogEventsCommand({
           logGroupName: container.logStreamName,
           logStreamName: task.group
         }));
