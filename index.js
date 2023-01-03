@@ -313,7 +313,7 @@ async function run() {
 
 
       if (preDeployCommand) {
-        core.info(`Running pre-deploy command: ${preDeployCommand}`);
+        core.info(`Running pre-deploy commandz: ${preDeployCommand}`);
         const runTaskResponse = await ecs.runTask({
           taskDefinition: taskDefArn,
           cluster: cluster,
