@@ -314,7 +314,6 @@ async function run() {
 
       if (preDeployCommand) {
         core.info(`Running pre-deploy command: ${preDeployCommand}`);
-        core.info(JSON.stringify(taskDefContents, undefined, 4));
         const networkConfig = {
           awsvpcConfiguration: {
             subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
@@ -322,7 +321,6 @@ async function run() {
             assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp : 'DISABLED'
           }
         };
-        core.info("Network config: " + JSON.stringify(networkConfig, undefined, 4));
         const runTaskResponse = await ecs.runTask({
           taskDefinition: taskDefArn,
           cluster: cluster,
@@ -338,19 +336,15 @@ async function run() {
           },
           networkConfiguration: networkConfig,
         }).promise();
-        core.info("Pre-deploy command run: " + JSON.stringify(runTaskResponse, undefined, 4));
         if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
           const failure = runTaskResponse.failures[0];
           throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
-        await new Promise(r => setTimeout(r, 5000));
+        core.info("Waiting for pre-deploy task to complete...")
+        await new Promise(r => setTimeout(r, 2000));
         await ecs.waitFor('tasksStopped', {
           tasks: [runTaskResponse.tasks[0].taskArn],
-          cluster: cluster,
-          $waiter: {
-            delay: 6,
-            maxAttempts: 50
-          }
+          cluster: cluster
         }).promise();
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
