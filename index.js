@@ -1,6 +1,16 @@
 const path = require('path');
 const core = require('@actions/core');
-const aws = require('aws-sdk');
+const { 
+  ECSClient, 
+  RegisterTaskDefinitionCommand, 
+  DescribeServicesCommand, 
+  RunTaskCommand, 
+  waitUntilTasksStopped, 
+  waitUntilServicesStable, 
+  UpdateServiceCommand,
+  
+} = require("@aws-sdk/client-ecs");
+const { CodeDeployClient, AddTagsToOnPremisesInstancesCommand } = require("@aws-sdk/client-codedeploy");
 const yaml = require('yaml');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -23,14 +33,14 @@ const IGNORED_TASK_DEFINITION_ATTRIBUTES = [
 // Deploy to a service that uses the 'ECS' deployment controller
 async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForService, waitForMinutes, forceNewDeployment) {
   core.debug('Updating the service');
-  await ecs.updateService({
+  await ecs.send(new UpdateServiceCommand({
     cluster: clusterName,
     service: service,
     taskDefinition: taskDefArn,
     forceNewDeployment: forceNewDeployment
-  }).promise();
+  }));
 
-  const consoleHostname = aws.config.region.startsWith('cn') ? 'console.amazonaws.cn' : 'console.aws.amazon.com';
+  const consoleHostname = 'console.aws.amazon.com';
 
   core.info(`Deployment started. Watch this deployment's progress in the Amazon ECS console: https://${consoleHostname}/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/services/${service}/events`);
 
@@ -38,14 +48,14 @@ async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForSe
   if (waitForService && waitForService.toLowerCase() === 'true') {
     core.debug(`Waiting for the service to become stable. Will wait for ${waitForMinutes} minutes`);
     const maxAttempts = (waitForMinutes * 60) / WAIT_DEFAULT_DELAY_SEC;
-    await ecs.waitFor('servicesStable', {
+    await waitUntilServicesStable({
       services: [service],
       cluster: clusterName,
       $waiter: {
         delay: WAIT_DEFAULT_DELAY_SEC,
         maxAttempts: maxAttempts
       }
-    }).promise();
+    })
   } else {
     core.debug('Not waiting for the service to become stable');
   }
@@ -133,126 +143,126 @@ function removeIgnoredAttributes(taskDef) {
 }
 
 function maintainValidObjects(taskDef) {
-    if (validateProxyConfigurations(taskDef)) {
-        taskDef.proxyConfiguration.properties.forEach((property, index, arr) => {
-            if (!('value' in property)) {
-                arr[index].value = '';
-            }
-            if (!('name' in property)) {
-                arr[index].name = '';
-            }
-        });
-    }
+  if (validateProxyConfigurations(taskDef)) {
+    taskDef.proxyConfiguration.properties.forEach((property, index, arr) => {
+      if (!('value' in property)) {
+        arr[index].value = '';
+      }
+      if (!('name' in property)) {
+        arr[index].name = '';
+      }
+    });
+  }
 
-    if(taskDef && taskDef.containerDefinitions){
-      taskDef.containerDefinitions.forEach((container) => {
-        if(container.environment){
-          container.environment.forEach((property, index, arr) => {
-            if (!('value' in property)) {
-              arr[index].value = '';
-            }
-          });
-        }
-      });
-    }
-    return taskDef;
+  if (taskDef && taskDef.containerDefinitions) {
+    taskDef.containerDefinitions.forEach((container) => {
+      if (container.environment) {
+        container.environment.forEach((property, index, arr) => {
+          if (!('value' in property)) {
+            arr[index].value = '';
+          }
+        });
+      }
+    });
+  }
+  return taskDef;
 }
 
-function validateProxyConfigurations(taskDef){
+function validateProxyConfigurations(taskDef) {
   return 'proxyConfiguration' in taskDef && taskDef.proxyConfiguration.type && taskDef.proxyConfiguration.type == 'APPMESH' && taskDef.proxyConfiguration.properties && taskDef.proxyConfiguration.properties.length > 0;
 }
 
 // Deploy to a service that uses the 'CODE_DEPLOY' deployment controller
 async function createCodeDeployDeployment(codedeploy, clusterName, service, taskDefArn, waitForService, waitForMinutes) {
-  core.debug('Updating AppSpec file with new task definition ARN');
+  // core.debug('Updating AppSpec file with new task definition ARN');
 
-  let codeDeployAppSpecFile = core.getInput('codedeploy-appspec', { required : false });
-  codeDeployAppSpecFile = codeDeployAppSpecFile ? codeDeployAppSpecFile : 'appspec.yaml';
+  // let codeDeployAppSpecFile = core.getInput('codedeploy-appspec', { required: false });
+  // codeDeployAppSpecFile = codeDeployAppSpecFile ? codeDeployAppSpecFile : 'appspec.yaml';
 
-  let codeDeployApp = core.getInput('codedeploy-application', { required: false });
-  codeDeployApp = codeDeployApp ? codeDeployApp : `AppECS-${clusterName}-${service}`;
+  // let codeDeployApp = core.getInput('codedeploy-application', { required: false });
+  // codeDeployApp = codeDeployApp ? codeDeployApp : `AppECS-${clusterName}-${service}`;
 
-  let codeDeployGroup = core.getInput('codedeploy-deployment-group', { required: false });
-  codeDeployGroup = codeDeployGroup ? codeDeployGroup : `DgpECS-${clusterName}-${service}`;
+  // let codeDeployGroup = core.getInput('codedeploy-deployment-group', { required: false });
+  // codeDeployGroup = codeDeployGroup ? codeDeployGroup : `DgpECS-${clusterName}-${service}`;
 
-  let codeDeployDescription = core.getInput('codedeploy-deployment-description', { required: false });
+  // let codeDeployDescription = core.getInput('codedeploy-deployment-description', { required: false });
 
-  let deploymentGroupDetails = await codedeploy.getDeploymentGroup({
-    applicationName: codeDeployApp,
-    deploymentGroupName: codeDeployGroup
-  }).promise();
-  deploymentGroupDetails = deploymentGroupDetails.deploymentGroupInfo;
+  // let deploymentGroupDetails = await codedeploy.getDeploymentGroup({
+  //   applicationName: codeDeployApp,
+  //   deploymentGroupName: codeDeployGroup
+  // }).promise();
+  // deploymentGroupDetails = deploymentGroupDetails.deploymentGroupInfo;
 
-  // Insert the task def ARN into the appspec file
-  const appSpecPath = path.isAbsolute(codeDeployAppSpecFile) ?
-    codeDeployAppSpecFile :
-    path.join(process.env.GITHUB_WORKSPACE, codeDeployAppSpecFile);
-  const fileContents = fs.readFileSync(appSpecPath, 'utf8');
-  const appSpecContents = yaml.parse(fileContents);
+  // // Insert the task def ARN into the appspec file
+  // const appSpecPath = path.isAbsolute(codeDeployAppSpecFile) ?
+  //   codeDeployAppSpecFile :
+  //   path.join(process.env.GITHUB_WORKSPACE, codeDeployAppSpecFile);
+  // const fileContents = fs.readFileSync(appSpecPath, 'utf8');
+  // const appSpecContents = yaml.parse(fileContents);
 
-  for (var resource of findAppSpecValue(appSpecContents, 'resources')) {
-    for (var name in resource) {
-      const resourceContents = resource[name];
-      const properties = findAppSpecValue(resourceContents, 'properties');
-      const taskDefKey = findAppSpecKey(properties, 'taskDefinition');
-      properties[taskDefKey] = taskDefArn;
-    }
-  }
+  // for (var resource of findAppSpecValue(appSpecContents, 'resources')) {
+  //   for (var name in resource) {
+  //     const resourceContents = resource[name];
+  //     const properties = findAppSpecValue(resourceContents, 'properties');
+  //     const taskDefKey = findAppSpecKey(properties, 'taskDefinition');
+  //     properties[taskDefKey] = taskDefArn;
+  //   }
+  // }
 
-  const appSpecString = JSON.stringify(appSpecContents);
-  const appSpecHash = crypto.createHash('sha256').update(appSpecString).digest('hex');
+  // const appSpecString = JSON.stringify(appSpecContents);
+  // const appSpecHash = crypto.createHash('sha256').update(appSpecString).digest('hex');
 
-  // Start the deployment with the updated appspec contents
-  core.debug('Starting CodeDeploy deployment');
-  let deploymentParams = {
-    applicationName: codeDeployApp,
-    deploymentGroupName: codeDeployGroup,
-    revision: {
-      revisionType: 'AppSpecContent',
-      appSpecContent: {
-        content: appSpecString,
-        sha256: appSpecHash
-      }
-    }
-  };
-  // If it hasn't been set then we don't even want to pass it to the api call to maintain previous behaviour.
-  if (codeDeployDescription) {
-    deploymentParams.description = codeDeployDescription
-  }
-  const createDeployResponse = await codedeploy.createDeployment(deploymentParams).promise();
-  core.setOutput('codedeploy-deployment-id', createDeployResponse.deploymentId);
-  core.info(`Deployment started. Watch this deployment's progress in the AWS CodeDeploy console: https://console.aws.amazon.com/codesuite/codedeploy/deployments/${createDeployResponse.deploymentId}?region=${aws.config.region}`);
+  // // Start the deployment with the updated appspec contents
+  // core.debug('Starting CodeDeploy deployment');
+  // let deploymentParams = {
+  //   applicationName: codeDeployApp,
+  //   deploymentGroupName: codeDeployGroup,
+  //   revision: {
+  //     revisionType: 'AppSpecContent',
+  //     appSpecContent: {
+  //       content: appSpecString,
+  //       sha256: appSpecHash
+  //     }
+  //   }
+  // };
+  // // If it hasn't been set then we don't even want to pass it to the api call to maintain previous behaviour.
+  // if (codeDeployDescription) {
+  //   deploymentParams.description = codeDeployDescription
+  // }
+  // const createDeployResponse = await codedeploy.createDeployment(deploymentParams).promise();
+  // core.setOutput('codedeploy-deployment-id', createDeployResponse.deploymentId);
+  // core.info(`Deployment started. Watch this deployment's progress in the AWS CodeDeploy console: https://console.aws.amazon.com/codesuite/codedeploy/deployments/${createDeployResponse.deploymentId}?region=${aws.config.region}`);
 
-  // Wait for deployment to complete
-  if (waitForService && waitForService.toLowerCase() === 'true') {
-    // Determine wait time
-    const deployReadyWaitMin = deploymentGroupDetails.blueGreenDeploymentConfiguration.deploymentReadyOption.waitTimeInMinutes;
-    const terminationWaitMin = deploymentGroupDetails.blueGreenDeploymentConfiguration.terminateBlueInstancesOnDeploymentSuccess.terminationWaitTimeInMinutes;
-    let totalWaitMin = deployReadyWaitMin + terminationWaitMin + waitForMinutes;
-    if (totalWaitMin > MAX_WAIT_MINUTES) {
-      totalWaitMin = MAX_WAIT_MINUTES;
-    }
-    const maxAttempts = (totalWaitMin * 60) / WAIT_DEFAULT_DELAY_SEC;
+  // // Wait for deployment to complete
+  // if (waitForService && waitForService.toLowerCase() === 'true') {
+  //   // Determine wait time
+  //   const deployReadyWaitMin = deploymentGroupDetails.blueGreenDeploymentConfiguration.deploymentReadyOption.waitTimeInMinutes;
+  //   const terminationWaitMin = deploymentGroupDetails.blueGreenDeploymentConfiguration.terminateBlueInstancesOnDeploymentSuccess.terminationWaitTimeInMinutes;
+  //   let totalWaitMin = deployReadyWaitMin + terminationWaitMin + waitForMinutes;
+  //   if (totalWaitMin > MAX_WAIT_MINUTES) {
+  //     totalWaitMin = MAX_WAIT_MINUTES;
+  //   }
+  //   const maxAttempts = (totalWaitMin * 60) / WAIT_DEFAULT_DELAY_SEC;
 
-    core.debug(`Waiting for the deployment to complete. Will wait for ${totalWaitMin} minutes`);
-    await codedeploy.waitFor('deploymentSuccessful', {
-      deploymentId: createDeployResponse.deploymentId,
-      $waiter: {
-        delay: WAIT_DEFAULT_DELAY_SEC,
-        maxAttempts: maxAttempts
-      }
-    }).promise();
-  } else {
-    core.debug('Not waiting for the deployment to complete');
-  }
+  //   core.debug(`Waiting for the deployment to complete. Will wait for ${totalWaitMin} minutes`);
+  //   await codedeploy.waitFor('deploymentSuccessful', {
+  //     deploymentId: createDeployResponse.deploymentId,
+  //     $waiter: {
+  //       delay: WAIT_DEFAULT_DELAY_SEC,
+  //       maxAttempts: maxAttempts
+  //     }
+  //   }).promise();
+  // } else {
+  //   core.debug('Not waiting for the deployment to complete');
+  // }
 }
 
 async function run() {
   try {
-    const ecs = new aws.ECS({
+    const ecs = new ECSClient({
       customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
     });
-    const codedeploy = new aws.CodeDeploy({
+    const codedeploy = new CodeDeployClient({
       customUserAgent: 'amazon-ecs-deploy-task-definition-for-github-actions'
     });
 
@@ -279,12 +289,12 @@ async function run() {
     const taskDefContents = maintainValidObjects(removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents))));
     let registerResponse;
     try {
-      registerResponse = await ecs.registerTaskDefinition(taskDefContents).promise();
+      registerResponse = await ecs.send(new RegisterTaskDefinitionCommand(taskDefContents))
     } catch (error) {
       core.setFailed("Failed to register task definition in ECS: " + error.message);
       core.debug("Task definition contents:");
       core.debug(JSON.stringify(taskDefContents, undefined, 4));
-      throw(error);
+      throw (error);
     }
     const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
     core.info(`Task definition registered: ${registerResponse}`);
@@ -296,10 +306,11 @@ async function run() {
       const clusterName = cluster ? cluster : 'default';
 
       // Determine the deployment controller
-      const describeResponse = await ecs.describeServices({
+
+      const describeResponse = await ecs.send(new DescribeServicesCommand({
         services: [service],
         cluster: clusterName
-      }).promise();
+      }));
 
       if (describeResponse.failures && describeResponse.failures.length > 0) {
         const failure = describeResponse.failures[0];
@@ -321,7 +332,7 @@ async function run() {
             assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.assignPublicIp : 'DISABLED'
           }
         };
-        const runTaskResponse = await ecs.runTask({
+        const runTaskResponse = await ecs.send(new RunTaskCommand({
           taskDefinition: taskDefArn,
           cluster: cluster,
           launchType: serviceResponse.launchType,
@@ -335,17 +346,17 @@ async function run() {
             ]
           },
           networkConfiguration: networkConfig,
-        }).promise();
+        }));
         if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
           const failure = runTaskResponse.failures[0];
           throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
         core.info("Waiting for pre-deploy task to complete...")
         await new Promise(r => setTimeout(r, 2000));
-        await ecs.waitFor('tasksStopped', {
+        await waitUntilTasksStopped({
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster
-        }).promise();
+        });
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
@@ -353,16 +364,13 @@ async function run() {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
         }
         // Output logs from container
-        const logStreamName = container.logStreamName;
-        const logGroupName = task.group;
-        const logEvents = await ecs.getLogEvents({
-          startTime: task.createdAt.getTime(),
-          logGroupName: logGroupName,
-          logStreamName: logStreamName,
-        }).promise();
-        logEvents.events.forEach(event => {
-          core.info(event.message);
-        });
+        // const logStreamName = container.logStreamName;
+        // const logGroupName = task.group;
+        // // get log messages
+        // const logEvents = await getLogEvents({
+        //   logGroupName: logGroupName,
+        //   logStreamName: logStreamName
+        // });
       } else {
         core.info(`No pre-deploy command specified`);
       }
@@ -390,5 +398,5 @@ module.exports = run;
 
 /* istanbul ignore next */
 if (require.main === module) {
-    run();
+  run();
 }
