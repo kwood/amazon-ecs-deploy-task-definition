@@ -343,7 +343,7 @@ async function run() {
           const failure = runTaskResponse.failures[0];
           throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 5000));
         await ecs.waitFor('tasksStopped', {
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster,
