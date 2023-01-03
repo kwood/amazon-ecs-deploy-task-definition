@@ -302,6 +302,13 @@ async function run() {
               command: preDeployCommand.split(' ')
             }
           ]
+        },
+        networkConfiguration: {
+          awsvpcConfiguration: {
+            subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].subnets : [],
+            assignPublicIp: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].associatePublicIpAddress : 'DISABLED',
+            securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? registerResponse.taskDefinition.containerDefinitions[0].networkInterfaces[0].securityGroups : []
+          }
         }
       }).promise();
       if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
