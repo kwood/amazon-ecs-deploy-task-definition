@@ -357,8 +357,7 @@ async function run() {
           const failure = runTaskResponse.failures[0];
           throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
-        core.info("Waiting for pre-deploy task to complete...")
-        await new Promise(r => setTimeout(r, 2000));
+        core.info(`Waiting for pre-deploy task ${runTaskResponse.tasks[0].taskArn}...`)
         await waitUntilTasksStopped({
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster
