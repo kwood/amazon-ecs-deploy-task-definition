@@ -367,8 +367,8 @@ async function run() {
         }
         // get log messages
         const logParams = {
-          logGroupName: container.logGroupName,
-          logStreamName: container.logStreamName,
+          logGroupName: registerResponse.taskDefinition.containerDefinitions[0].logConfiguration.options['awslogs-group'],
+          logStreamName: registerResponse.taskDefinition.containerDefinitions[0].logConfiguration.options['awslogs-stream-prefix'] + '/' + container.name + '/' + task.taskArn.split('/').pop(),
           startFromHead: true
         }
         core.info(`Getting log events from CloudWatch...`+JSON.stringify(logParams, undefined, 4))
