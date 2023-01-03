@@ -315,6 +315,13 @@ async function run() {
       if (preDeployCommand) {
         core.info(`Running pre-deploy command: ${preDeployCommand}`);
         core.info(JSON.stringify(taskDefContents, undefined, 4));
+        const networkConfig = {
+          awsvpcConfiguration: {
+            subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
+            securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.securityGroups : [],
+          }
+        };
+        core.info("Network config: " + JSON.stringify(networkConfig, undefined, 4));
         const runTaskResponse = await ecs.runTask({
           taskDefinition: taskDefArn,
           cluster: cluster,
