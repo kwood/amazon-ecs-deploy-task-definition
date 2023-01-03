@@ -303,7 +303,7 @@ async function run() {
       throw (error);
     }
     const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
-    core.info(`Task definition registered: ${registerResponse}`);
+    core.info(`Task definition registered`);
     core.setOutput('task-definition-arn', taskDefArn);
 
 
@@ -358,7 +358,7 @@ async function run() {
           throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
         }
         core.info(`Waiting for pre-deploy task ${runTaskResponse.tasks[0].taskArn}...`)
-        await waitUntilTasksStopped({
+        await waitUntilTasksStopped({client: ecs, maxDelay: 10, maxWaitTime: 300},{
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster
         });
