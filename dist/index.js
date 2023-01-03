@@ -48,7 +48,7 @@ async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForSe
 
   const consoleHostname = 'console.aws.amazon.com';
 
-  core.info(`Deployment started. Watch this deployment's progress in the Amazon ECS console: https://${consoleHostname}/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/services/${service}/events`);
+  core.info(`Deployment started. Watch this deployment's progress in the Amazon ECS console: https://${consoleHostname}/ecs/home?region=${process.env.AWS_REGION}#/clusters/${clusterName}/services/${service}/events`);
 
   // Wait for service stability
   if (waitForService && waitForService.toLowerCase() === 'true') {
