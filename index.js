@@ -351,7 +351,7 @@ async function run() {
             delay: 6,
             maxAttempts: 50
           }
-        }.promise());
+        }).promise();
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
         const container = task.containers[0];
