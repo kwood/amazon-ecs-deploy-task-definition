@@ -342,7 +342,7 @@ async function run() {
           throw new Error(`${failure.arn} is ${failure.reason}`);
         }
         await ecs.waitFor('tasksStopped', {
-          tasks: runTaskResponse.tasks.map(task => task.taskArn),
+          tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster,
           $waiter: {
             delay: 6,
