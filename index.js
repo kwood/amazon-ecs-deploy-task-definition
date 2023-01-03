@@ -332,7 +332,8 @@ async function run() {
               subnets: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.subnets : [],
               securityGroups: registerResponse.taskDefinition.networkMode === 'awsvpc' ? describeResponse.services[0].networkConfiguration.awsvpcConfiguration.securityGroups : [],
             }
-          }
+          },
+          
         }).promise();
         core.info("Pre-deploy command run: " + JSON.stringify(runTaskResponse, undefined, 4));
         if (runTaskResponse.failures && runTaskResponse.failures.length > 0) {
@@ -341,6 +342,12 @@ async function run() {
         }
         await ecs.waitFor('tasksStopped', {
           tasks: runTaskResponse.tasks.map(task => task.taskArn),
+          cluster: cluster,
+          $waiter: {
+            delay: 6,
+            maxAttempts: 50
+          }
+
         }).promise();
         // Get log output from the task
         const task = runTaskResponse.tasks[0];
