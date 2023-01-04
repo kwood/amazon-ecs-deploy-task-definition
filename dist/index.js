@@ -21,9 +21,6 @@ const yaml = __nccwpck_require__(44083);
 const fs = __nccwpck_require__(57147);
 const crypto = __nccwpck_require__(6113);
 
-const MAX_WAIT_MINUTES = 360;  // 6 hours
-const WAIT_DEFAULT_DELAY_SEC = 15;
-
 // Attributes that are returned by DescribeTaskDefinition, but are not valid RegisterTaskDefinition inputs
 const IGNORED_TASK_DEFINITION_ATTRIBUTES = [
   'compatibilities',
@@ -53,15 +50,10 @@ async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForSe
   // Wait for service stability
   if (waitForService && waitForService.toLowerCase() === 'true') {
     core.info(`Waiting for the service ${service} to become stable. Will wait for ${waitForMinutes} minutes`);
-    const maxAttempts = (waitForMinutes * 60) / WAIT_DEFAULT_DELAY_SEC;
-    await waitUntilServicesStable({
+    await waitUntilServicesStable({client: ecs, maxDelay: 10, maxWaitTime: 600}, {
       services: [service],
       cluster: clusterName,
-      $waiter: {
-        delay: WAIT_DEFAULT_DELAY_SEC,
-        maxAttempts: maxAttempts
-      }
-    })
+    });
   } else {
     core.debug('Not waiting for the service to become stable');
   }
