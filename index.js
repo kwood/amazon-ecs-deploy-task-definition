@@ -44,7 +44,7 @@ async function updateEcsService(ecs, clusterName, service, taskDefArn, waitForSe
   // Wait for service stability
   if (waitForService && waitForService.toLowerCase() === 'true') {
     core.info(`Waiting for the service ${service} to become stable. Will wait for ${waitForMinutes} minutes`);
-    await waitUntilServicesStable({client: ecs, maxDelay: 10, maxWaitTime: 600}, {
+    await waitUntilServicesStable({client: ecs, minDelay:10, maxDelay: 10, maxWaitTime: 1200}, {
       services: [service],
       cluster: clusterName,
     });
