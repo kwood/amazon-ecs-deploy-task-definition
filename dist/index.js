@@ -274,9 +274,6 @@ async function run() {
     const waitForService = core.getInput('wait-for-service-stability', { required: false });
     const preDeployCommand = core.getInput('pre-deploy-command', { required: false });
     let waitForMinutes = parseInt(core.getInput('wait-for-minutes', { required: false })) || 30;
-    if (waitForMinutes > MAX_WAIT_MINUTES) {
-      waitForMinutes = MAX_WAIT_MINUTES;
-    }
 
     const forceNewDeployInput = core.getInput('force-new-deployment', { required: false }) || 'false';
     const forceNewDeployment = forceNewDeployInput.toLowerCase() === 'true';
