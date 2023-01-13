@@ -5,6 +5,7 @@ const {
   RegisterTaskDefinitionCommand, 
   DescribeServicesCommand, 
   RunTaskCommand, 
+  DescribeTasksCommand,
   waitUntilTasksStopped, 
   waitUntilServicesStable, 
   UpdateServiceCommand
@@ -348,8 +349,16 @@ async function run() {
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster
         });
+        const describeResponse = await ecs.send(new DescribeTasksCommand({
+          tasks: [runTaskResponse.tasks[0].taskArn],
+          cluster: cluster
+        }));
+        if (describeResponse.failures && describeResponse.failures.length > 0) {
+          const failure = describeResponse.failures[0];
+          throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
+        }
         // Get log output from the task
-        const task = runTaskResponse.tasks[0];
+        const task = describeResponse.tasks[0];
         const container = task.containers[0];
         if (container.exitCode && container.exitCode !== 0) {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
