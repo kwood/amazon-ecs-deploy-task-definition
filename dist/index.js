@@ -11,6 +11,7 @@ const {
   RegisterTaskDefinitionCommand, 
   DescribeServicesCommand, 
   RunTaskCommand, 
+  DescribeTasksCommand,
   waitUntilTasksStopped, 
   waitUntilServicesStable, 
   UpdateServiceCommand
@@ -354,8 +355,16 @@ async function run() {
           tasks: [runTaskResponse.tasks[0].taskArn],
           cluster: cluster
         });
+        const describeResponse = await ecs.send(new DescribeTasksCommand({
+          tasks: [runTaskResponse.tasks[0].taskArn],
+          cluster: cluster
+        }));
+        if (describeResponse.failures && describeResponse.failures.length > 0) {
+          const failure = describeResponse.failures[0];
+          throw new Error(`Failure: ${failure.arn} is ${failure.reason}`);
+        }
         // Get log output from the task
-        const task = runTaskResponse.tasks[0];
+        const task = describeResponse.tasks[0];
         const container = task.containers[0];
         if (container.exitCode && container.exitCode !== 0) {
           throw new Error(`Pre-deploy task exited with code ${container.exitCode}`);
@@ -366,13 +375,17 @@ async function run() {
           logStreamName: registerResponse.taskDefinition.containerDefinitions[0].logConfiguration.options['awslogs-stream-prefix'] + '/' + container.name + '/' + task.taskArn.split('/').pop(),
           startFromHead: true
         }
-        core.info(`Getting log events from CloudWatch...`+JSON.stringify(logParams, undefined, 4))
-        core.info(`task...`+JSON.stringify(task, undefined, 4))
-        const logEvents = await cloudwatch.send(new GetLogEventsCommand(logParams));
-        core.info(`Pre-deploy task output: `);
-        logEvents.events.forEach(event => {
-          core.info(event.message);
-        });
+        if (registerResponse.taskDefinition.containerDefinitions[0].logConfiguration.options['awslogs-stream-prefix']){
+          core.info(`Getting log events from CloudWatch...`+JSON.stringify(logParams, undefined, 4))
+          core.info(`task...`+JSON.stringify(task, undefined, 4))
+          const logEvents = await cloudwatch.send(new GetLogEventsCommand(logParams));
+          core.info(`Pre-deploy task output: `);
+          logEvents.events.forEach(event => {
+            core.info(event.message);
+          });
+        } else {
+          core.info(`Can't watch the logs because there's no CloudWatch log group defined`);
+        }
       } else {
         core.info(`No pre-deploy command specified`);
       }
